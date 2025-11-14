@@ -46,7 +46,7 @@ const TermsOfUsePage: React.FC = () => {
               <h3 className="text-xl font-semibold text-gray-800 mb-3">1.1 Identificação da Plataforma</h3>
               <ul className="space-y-2 text-gray-700 ml-4">
                 <li>• <strong>Nome:</strong> FitMeal</li>
-                <li>• <strong>URL:</strong> https://fitmealfit.netlify.app</li>
+                <li>• <strong>URL:</strong> https://fitmealnutri.netlify.app</li>
                 <li>• <strong>Aplicativo móvel:</strong> Disponível para iOS e Android</li>
                 <li>• <strong>Finalidade:</strong> Plataforma digital dedicada ao fornecimento de receitas fitness, orientações nutricionais, informações sobre alimentação saudável e comunidade interativa</li>
                 <li>• <strong>Desenvolvedor:</strong> Inova.Js</li>
@@ -520,13 +520,39 @@ const TermsOfUsePage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.2 Dados Coletados</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.2 Permissões do Aplicativo</h3>
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                  <h4 className="font-semibold text-yellow-800 mb-2">6.2.1 Permissão de Câmera (android.permission.CAMERA)</h4>
+                  <p className="text-yellow-700 mb-2">
+                    <strong>Finalidade:</strong> O aplicativo solicita acesso à câmera do dispositivo exclusivamente 
+                    para permitir que você tire fotos de alimentos para reconhecimento nutricional através de 
+                    inteligência artificial.
+                  </p>
+                  <p className="text-yellow-700 mb-2">
+                    <strong>Uso dos Dados:</strong> As fotos são processadas localmente no dispositivo e enviadas 
+                    temporariamente para análise por serviços de inteligência artificial. As imagens não são 
+                    armazenadas permanentemente em nossos servidores e são descartadas após o processamento.
+                  </p>
+                  <p className="text-yellow-700">
+                    <strong>Controle do Usuário:</strong> Você pode revogar esta permissão a qualquer momento 
+                    através das configurações do dispositivo. O aplicativo continuará funcionando normalmente, 
+                    mas a funcionalidade de reconhecimento de alimentos não estará disponível sem esta permissão.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.3 Dados Coletados</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h4 className="font-semibold text-blue-800 mb-2">Dados Fornecidos Voluntariamente:</h4>
                     <ul className="space-y-1 text-blue-700 text-sm">
                       <li>• Nome, e-mail e mensagem através de formulário de contato</li>
                       <li>• Nome e e-mail para assinatura de newsletter</li>
+                      <li>• Dados do perfil (peso, altura, objetivos fitness)</li>
+                      <li>• Preferências alimentares e restrições</li>
+                      <li>• Histórico de peso e medidas corporais</li>
+                      <li>• Fotos de progresso (quando você opta por salvá-las)</li>
                     </ul>
                   </div>
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -534,13 +560,15 @@ const TermsOfUsePage: React.FC = () => {
                     <ul className="space-y-1 text-orange-700 text-sm">
                       <li>• Cookies técnicos para funcionalidade da plataforma</li>
                       <li>• Informações de navegação e localização (endereço IP)</li>
+                      <li>• Dados de compras e transações (via Google Play Billing)</li>
+                      <li>• Histórico de uso do aplicativo</li>
                     </ul>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.3 Finalidades do Tratamento</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.4 Finalidades do Tratamento</h3>
                 <ul className="space-y-2 text-gray-700 ml-4">
                   <li>• Resposta a mensagens e solicitações</li>
                   <li>• Aprimoramento da experiência do usuário</li>
@@ -551,7 +579,7 @@ const TermsOfUsePage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.4 Compartilhamento de Dados</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.5 Compartilhamento de Dados</h3>
                 <p className="text-gray-700 leading-relaxed mb-3">
                   Os dados pessoais são compartilhados exclusivamente:
                 </p>
@@ -563,7 +591,7 @@ const TermsOfUsePage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.5 Período de Retenção</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.6 Período de Retenção</h3>
                 <ul className="space-y-2 text-gray-700 ml-4">
                   <li>• Dados de contato: até 5 anos</li>
                   <li>• Dados de navegação: até 12 meses</li>
@@ -572,7 +600,7 @@ const TermsOfUsePage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.6 Direitos do Titular</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.7 Direitos do Titular</h3>
                 <p className="text-gray-700 leading-relaxed mb-3">
                   O usuário possui os seguintes direitos garantidos pela LGPD:
                 </p>
@@ -584,7 +612,43 @@ const TermsOfUsePage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.7 Segurança dos Dados</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.8 Armazenamento de Dados</h3>
+                <p className="text-gray-700 leading-relaxed mb-3">
+                  Utilizamos o Firebase (Google) para armazenamento seguro de dados:
+                </p>
+                <ul className="space-y-2 text-gray-700 ml-4">
+                  <li>• <strong>Firebase Authentication:</strong> Autenticação segura de usuários</li>
+                  <li>• <strong>Firestore:</strong> Armazenamento de perfis, planos alimentares e dados do usuário</li>
+                  <li>• <strong>Firebase Storage:</strong> Armazenamento de fotos de progresso (quando você opta por salvá-las)</li>
+                  <li>• <strong>Localização:</strong> Dados armazenados em servidores do Google, que podem estar localizados fora do Brasil</li>
+                  <li>• <strong>Segurança:</strong> Todos os dados são criptografados em trânsito e em repouso</li>
+                </ul>
+                <p className="text-gray-700 leading-relaxed mt-3">
+                  O Firebase está em conformidade com padrões internacionais de segurança e privacidade. 
+                  Para mais informações sobre como o Google trata seus dados, consulte a política de privacidade do Google.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.9 Compras no Aplicativo</h3>
+                <p className="text-gray-700 leading-relaxed mb-3">
+                  O aplicativo oferece compras de créditos e assinaturas através do Google Play Billing:
+                </p>
+                <ul className="space-y-2 text-gray-700 ml-4">
+                  <li>• <strong>Processamento de Pagamentos:</strong> Todas as transações são processadas pelo Google Play</li>
+                  <li>• <strong>Dados de Pagamento:</strong> Não armazenamos informações de cartão de crédito ou métodos de pagamento</li>
+                  <li>• <strong>Histórico de Compras:</strong> Armazenamos apenas informações sobre créditos adquiridos e assinaturas ativas</li>
+                  <li>• <strong>Política de Reembolso:</strong> Reembolsos são gerenciados através do Google Play, conforme suas políticas</li>
+                  <li>• <strong>Assinaturas:</strong> Podem ser canceladas a qualquer momento através das configurações do Google Play</li>
+                </ul>
+                <p className="text-gray-700 leading-relaxed mt-3">
+                  As compras estão sujeitas aos termos e condições do Google Play. Para gerenciar suas assinaturas, 
+                  acesse as configurações da sua conta Google Play.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.10 Segurança dos Dados</h3>
                 <p className="text-gray-700 leading-relaxed mb-3">
                   A plataforma adota as seguintes medidas de segurança:
                 </p>
@@ -592,18 +656,25 @@ const TermsOfUsePage: React.FC = () => {
                   <li>• Criptografia SSL/TLS para transmissão de dados</li>
                   <li>• Controle de acesso restrito às informações</li>
                   <li>• Realização de backups regulares e monitoramento contínuo</li>
+                  <li>• Autenticação segura através do Firebase Authentication</li>
+                  <li>• Proteção contra acesso não autorizado</li>
                 </ul>
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.8 Transferência Internacional</h3>
-                <p className="text-gray-700 leading-relaxed">
-                  Para serviços externos utilizados, são adotadas garantias adequadas de proteção conforme a LGPD.
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.11 Transferência Internacional</h3>
+                <p className="text-gray-700 leading-relaxed mb-3">
+                  Alguns dados podem ser transferidos e armazenados em servidores localizados fora do Brasil:
                 </p>
+                <ul className="space-y-2 text-gray-700 ml-4">
+                  <li>• <strong>Firebase (Google):</strong> Dados podem ser armazenados em servidores internacionais do Google</li>
+                  <li>• <strong>OpenAI:</strong> Fotos de alimentos são processadas temporariamente por serviços de IA</li>
+                  <li>• <strong>Garantias:</strong> Todos os serviços utilizados possuem garantias adequadas de proteção conforme a LGPD</li>
+                </ul>
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.9 Proteção de Menores</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">6.12 Proteção de Menores</h3>
                 <ul className="space-y-2 text-gray-700 ml-4">
                   <li>• Proibida a coleta de dados de menores de 14 anos</li>
                   <li>• Usuários entre 14 e 17 anos necessitam consentimento dos responsáveis legais</li>

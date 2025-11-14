@@ -96,9 +96,9 @@ const MealPlansPage: React.FC = () => {
   
   return (
     <PageTransition>
-    <div className="pt-24 pb-16">
+    <div className="pb-16">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary-600 to-primary-800 text-white py-16">
+      <section className="bg-gradient-to-r from-primary-600 to-primary-800 text-white pt-28 pb-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-3xl md:text-4xl font-bold font-display mb-6">

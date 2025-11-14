@@ -15,9 +15,10 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
   const isPlansPage = location.pathname === '/planos';
+  const isCreditsPage = location.pathname === '/creditos';
   
-  // Adiciona padding apenas para páginas que não são a Home ou Planos
-  const mainClasses = `flex-grow ${!isHomePage && !isPlansPage ? 'pt-24' : ''}`;
+  // Adiciona padding apenas para páginas que não são a Home, Planos ou Créditos
+  const mainClasses = `flex-grow ${!isHomePage && !isPlansPage && !isCreditsPage ? 'pt-24' : ''}`;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -25,12 +26,12 @@ const MainLayout: React.FC = () => {
       <main className={mainClasses}>
         {currentUser ? (
           <TermsGuard>
-            <div className={!isHomePage && !isPlansPage ? 'container mx-auto px-4' : ''}>
+            <div className={!isHomePage && !isPlansPage && !isCreditsPage ? 'container mx-auto px-4' : ''}>
               <Outlet />
             </div>
           </TermsGuard>
         ) : (
-          <div className={!isHomePage && !isPlansPage ? 'container mx-auto px-4' : ''}>
+          <div className={!isHomePage && !isPlansPage && !isCreditsPage ? 'container mx-auto px-4' : ''}>
             <Outlet />
           </div>
         )}

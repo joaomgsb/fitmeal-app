@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, User, ChevronDown, Settings, FileText, Newspaper } from 'lucide-react';
+import { Menu, X, User, ChevronDown, Settings, FileText, Newspaper, Coins } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useProfile } from '../../hooks/useProfile';
 import { useTour } from '../../contexts/TourContext';
+import { useCredits } from '../../hooks/useCredits';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,6 +12,7 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const { profile } = useProfile();
   const { isTourActive } = useTour();
+  const { credits } = useCredits();
   const adminDropdownRef = useRef<HTMLDivElement>(null);
 
   // CSS específico para MacBook M1
@@ -184,6 +186,18 @@ const Navbar: React.FC = () => {
 
           {/* User Profile & Mobile Menu Button */}
           <div className="flex items-center space-x-2 sm:space-x-4 ml-8">
+            {/* Credits Indicator */}
+            {credits !== null && (
+              <Link
+                to="/creditos"
+                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors"
+                title="Seus créditos"
+              >
+                <Coins size={18} />
+                <span className="font-semibold text-sm">{credits.credits}</span>
+              </Link>
+            )}
+            
             <Link 
               to="/perfil" 
               className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-neutral-100 text-neutral-600 hover:bg-primary-100 hover:text-primary-500 transition-colors"
@@ -211,6 +225,17 @@ const Navbar: React.FC = () => {
           transition={{ duration: 0.3 }}
         >
           <div className="px-4 py-4">
+            {/* Credits in Mobile Menu */}
+            {credits !== null && (
+              <Link
+                to="/creditos"
+                className="flex items-center gap-3 px-4 py-3 mb-2 rounded-md bg-primary-50 text-primary-600 font-semibold"
+              >
+                <Coins size={20} />
+                <span>{credits.credits} {credits.credits === 1 ? 'crédito' : 'créditos'}</span>
+              </Link>
+            )}
+            
             <nav className="flex flex-col space-y-1">
               {navLinks.map((link) => (
                 <NavLink

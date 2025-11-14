@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Loader2, AlertCircle, Target, Activity, Clock, Calculator, Utensils, Sparkles, Zap } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Loader2, AlertCircle, Target, Activity, Clock, Calculator, Utensils, Sparkles, Zap, Coins } from 'lucide-react';
 import { generateMealPlan } from '../../lib/openai';
 import { useProfile } from '../../hooks/useProfile';
+import { useCredits } from '../../hooks/useCredits';
+import { useMealPlans } from '../../hooks/useMealPlans';
 
 interface GenerateMealPlanButtonProps {
   onPlanGenerated: (plan: any) => void;
@@ -12,6 +14,9 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { profile } = useProfile();
+  const { credits, checkHasCredits, consume } = useCredits();
+  const { savePlan } = useMealPlans();
+  const navigate = useNavigate();
 
   const missingFields = !profile ? [] : [
     !profile.weight && 'peso',
@@ -28,6 +33,13 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
   const handleGeneratePlan = async () => {
     if (!profile) return;
     if (missingFields.length > 0) return;
+
+    // Verificar se tem créditos
+    const hasCredits = await checkHasCredits(1);
+    if (!hasCredits) {
+      setError('Você não possui créditos suficientes. Compre créditos para gerar planos personalizados.');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -55,8 +67,29 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
       };
 
       const plan = await generateMealPlan(userData);
-      onPlanGenerated(plan);
+      
+      // Salvar o plano primeiro para obter o ID
+      const savedPlan = await savePlan({
+        ...plan,
+        isCustomPlan: true
+      });
+
+      if (savedPlan) {
+        // Consumir crédito após gerar o plano com sucesso
+        const creditConsumed = await consume(savedPlan.id, 'Geração de plano personalizado');
+        
+        if (!creditConsumed) {
+          // Se não conseguiu consumir o crédito, não deve acontecer, mas vamos tratar
+          setError('Erro ao processar crédito. O plano foi gerado, mas entre em contato com o suporte.');
+          return;
+        }
+
+        onPlanGenerated(plan);
+      } else {
+        setError('Erro ao salvar o plano. Tente novamente.');
+      }
     } catch (error) {
+      console.error('Erro ao gerar plano:', error);
       setError('Não foi possível gerar o plano. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
@@ -171,11 +204,28 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
         ))}
       </div>
 
+      {/* Credits Info */}
+      {credits && (
+        <div className="mb-6 text-center">
+          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-2 border border-white/30">
+            <Coins className="w-5 h-5 text-white" />
+            <span className="text-white font-semibold">
+              {credits.credits} {credits.credits === 1 ? 'crédito' : 'créditos'} disponível{credits.credits === 1 ? '' : 'eis'}
+            </span>
+          </div>
+          {credits.credits === 0 && (
+            <p className="text-primary-100 mt-2 text-sm">
+              Você precisa de créditos para gerar planos. <Link to="/creditos" className="underline font-semibold">Compre agora</Link>
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Generate Button */}
       <div className="text-center">
         <button
           onClick={handleGeneratePlan}
-          disabled={loading}
+          disabled={loading || (credits && credits.credits < 1)}
           className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-white to-gray-100 text-primary-600 rounded-xl hover:from-gray-100 hover:to-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
         >
           {loading ? (
@@ -186,7 +236,7 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
           ) : (
             <>
               <Sparkles className="w-6 h-6 mr-3" />
-              Gerar Plano Personalizado
+              Gerar Plano Personalizado (1 crédito)
             </>
           )}
         </button>
@@ -195,8 +245,16 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
           <div className="mt-6 p-4 bg-red-100 border border-red-200 text-red-700 rounded-xl max-w-md mx-auto">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
-              {error}
+              <span>{error}</span>
             </div>
+            {error.includes('créditos') && (
+              <Link
+                to="/creditos"
+                className="mt-3 inline-block px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+              >
+                Comprar Créditos
+              </Link>
+            )}
           </div>
         )}
       </div>
