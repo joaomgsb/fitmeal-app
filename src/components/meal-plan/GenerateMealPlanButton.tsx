@@ -207,17 +207,20 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
       {/* Credits Info */}
       {credits && (
         <div className="mb-6 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-2 border border-white/30">
+          <Link 
+            to="/creditos"
+            className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-2 border border-white/30 hover:bg-white/30 transition-colors cursor-pointer"
+          >
             <Coins className="w-5 h-5 text-white" />
             <span className="text-white font-semibold">
               {credits.credits} {credits.credits === 1 ? 'crédito' : 'créditos'} disponível{credits.credits === 1 ? '' : 'eis'}
             </span>
-          </div>
-          {credits.credits === 0 && (
-            <p className="text-primary-100 mt-2 text-sm">
-              Você precisa de créditos para gerar planos. <Link to="/creditos" className="underline font-semibold">Compre agora</Link>
-            </p>
-          )}
+          </Link>
+          <p className="text-primary-100 mt-2 text-sm">
+            <Link to="/creditos" className="underline font-semibold hover:text-white transition-colors">
+              {credits.credits === 0 ? 'Compre créditos para gerar planos' : 'Comprar mais créditos'}
+            </Link>
+          </p>
         </div>
       )}
 

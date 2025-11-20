@@ -386,4 +386,3 @@ const CreditsPage: React.FC = () => {
 };
 
 export default CreditsPage;
-

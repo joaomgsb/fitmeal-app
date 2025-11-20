@@ -85,6 +85,34 @@ export function isBillingAvailable(): boolean {
 }
 
 /**
+ * Verifica e consome compras pendentes
+ */
+async function checkUnconsumedPurchases() {
+  if (!isBillingAvailable()) return;
+  
+  try {
+    // Consultar compras INAPP (consumíveis)
+    const result = await GooglePlayBilling.queryPurchases({ type: 'inapp' });
+    
+    if (result.purchases && result.purchases.length > 0) {
+      console.log('Encontradas compras não consumidas:', result.purchases.length);
+      
+      for (const purchase of result.purchases) {
+        // Verificar se é um produto consumível nosso
+        const product = BILLING_PRODUCTS.find(p => p.id === purchase.productId);
+        
+        if (product && product.type === 'consumable') {
+          console.log(`Consumindo compra pendente: ${purchase.productId}`);
+          await GooglePlayBilling.consumePurchase({ purchaseToken: purchase.purchaseToken });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao verificar compras não consumidas:', error);
+  }
+}
+
+/**
  * Inicializa o serviço de billing
  */
 export async function initializeBilling(): Promise<void> {
@@ -97,6 +125,9 @@ export async function initializeBilling(): Promise<void> {
     const result = await GooglePlayBilling.initialize();
     if (!result.success) {
       console.error('Erro ao inicializar billing:', result.error);
+    } else {
+      // Verificar compras pendentes após inicialização
+      await checkUnconsumedPurchases();
     }
   } catch (error) {
     console.error('Erro ao inicializar Google Play Billing:', error);
@@ -112,8 +143,13 @@ export async function getAvailableProducts(): Promise<BillingProduct[]> {
   }
 
   try {
-    const productIds = BILLING_PRODUCTS.map(p => p.id);
-    const result = await GooglePlayBilling.getProducts({ productIds: productIds });
+    // Passar lista completa com tipos para o plugin
+    const productsRequest = BILLING_PRODUCTS.map(p => ({
+      id: p.id,
+      type: p.type
+    }));
+    
+    const result = await GooglePlayBilling.getProducts({ products: productsRequest });
     
     if (result.products && result.products.length > 0) {
       // Mapear produtos do Google Play para nosso formato
@@ -150,12 +186,22 @@ export async function purchaseProduct(productId: string): Promise<{
   }
 
   try {
-    const result = await GooglePlayBilling.purchaseProduct({ productId });
+    const product = BILLING_PRODUCTS.find(p => p.id === productId);
+    if (!product) {
+      return {
+        success: false,
+        error: 'Produto não encontrado'
+      };
+    }
+
+    const result = await GooglePlayBilling.purchaseProduct({ 
+      productId,
+      type: product.type 
+    });
     
     if (result.success && result.purchaseToken) {
       // Para produtos consumíveis, consumir imediatamente
-      const product = BILLING_PRODUCTS.find(p => p.id === productId);
-      if (product && product.type === 'consumable') {
+      if (product.type === 'consumable') {
         await GooglePlayBilling.consumePurchase({ purchaseToken: result.purchaseToken });
       }
       
@@ -245,4 +291,3 @@ export function openSubscriptionManagement(): void {
   // Abrir no navegador ou app do Play Store
   window.open(url, '_blank');
 }
-

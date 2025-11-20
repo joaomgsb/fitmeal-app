@@ -1,6 +1,5 @@
 import { doc, getDoc, setDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
-import { User } from 'firebase/auth';
 
 export interface CreditTransaction {
   id: string;
@@ -8,7 +7,9 @@ export interface CreditTransaction {
   amount: number; // positivo para compra, negativo para consumo
   productId?: string; // ID do produto comprado
   planId?: string; // ID do plano gerado (para consumo)
-  timestamp: any;
+  // Usamos string ISO em vez de serverTimestamp() dentro de arrays,
+  // pois o Firestore não permite serverTimestamp() em campos de array.
+  timestamp: string;
   description: string;
 }
 
@@ -19,7 +20,8 @@ export interface Subscription {
   startDate: any;
   endDate?: any;
   creditsPerPeriod: number;
-  lastRenewal?: any;
+  // Também armazenamos como string ISO
+  lastRenewal?: string;
 }
 
 export interface UserCredits {
@@ -69,7 +71,8 @@ export async function addCredits(
     type: 'purchase',
     amount,
     productId,
-    timestamp: serverTimestamp(),
+    // Usamos a data do cliente porque serverTimestamp() não é permitido em arrays
+    timestamp: new Date().toISOString(),
     description
   };
 
@@ -116,7 +119,8 @@ export async function consumeCredit(
     type: 'consumption',
     amount: -1,
     planId,
-    timestamp: serverTimestamp(),
+    // Usamos a data do cliente porque serverTimestamp() não é permitido em arrays
+    timestamp: new Date().toISOString(),
     description
   };
 
@@ -216,13 +220,15 @@ export async function processSubscriptionRenewal(
     type: 'subscription',
     amount: creditsAmount,
     productId: subscription.productId,
-    timestamp: serverTimestamp(),
+    // Usamos a data do cliente porque serverTimestamp() não é permitido em arrays
+    timestamp: new Date().toISOString(),
     description: `Renovação de assinatura: ${subscription.productId}`
   };
 
   const updatedSubscriptions = currentData.subscriptions.map(sub =>
     sub.id === subscriptionId
-      ? { ...sub, lastRenewal: serverTimestamp() }
+      // Usamos a data do cliente porque serverTimestamp() não é permitido em arrays
+      ? { ...sub, lastRenewal: new Date().toISOString() }
       : sub
   );
 
@@ -233,4 +239,24 @@ export async function processSubscriptionRenewal(
     lastUpdated: serverTimestamp()
   });
 }
+
+/**
+ * Exemplo de função de reprocessamento de créditos de assinaturas
+ * (pode ser usada em um job ou função cloud no futuro)
+ */
+export async function reprocessAllSubscriptionsForUser(userId: string): Promise<void> {
+  const creditsRef = doc(db, 'users', userId, 'credits', 'data');
+  const creditsSnap = await getDoc(creditsRef);
+
+  if (!creditsSnap.exists()) {
+    return;
+  }
+
+  const currentData = creditsSnap.data() as UserCredits;
+
+  // Aqui você poderia implementar uma lógica para verificar quais assinaturas
+  // precisam ser renovadas e chamar processSubscriptionRenewal para cada uma.
+  // Por enquanto, deixamos apenas a estrutura pronta.
+}
+
 
