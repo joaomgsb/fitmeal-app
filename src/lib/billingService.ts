@@ -177,6 +177,7 @@ export async function purchaseProduct(productId: string): Promise<{
   purchaseToken?: string;
   orderId?: string;
   error?: string;
+  productId?: string;
 }> {
   if (!isBillingAvailable()) {
     return {
@@ -209,8 +210,36 @@ export async function purchaseProduct(productId: string): Promise<{
         success: true,
         purchaseToken: result.purchaseToken,
         orderId: result.orderId,
-        productId: result.productId
+        productId: result.productId || productId
       };
+    }
+    
+    // Tratamento para erro "Item Already Owned" (Código 7)
+    // Se o usuário já possui o item, tentamos consumi-lo para liberar nova compra
+    if (!result.success && result.error && (result.error.includes('7') || result.error.includes('already owned'))) {
+      console.log('Item já adquirido. Tentando recuperar e consumir...');
+      
+      try {
+        const purchasesResult = await GooglePlayBilling.queryPurchases({ type: 'inapp' });
+        const existingPurchase = purchasesResult.purchases?.find((p: any) => p.productId === productId);
+
+        if (existingPurchase && product.type === 'consumable') {
+           console.log('Compra encontrada. Consumindo agora...');
+           const consumeResult = await GooglePlayBilling.consumePurchase({ purchaseToken: existingPurchase.purchaseToken });
+           
+           if (consumeResult.success) {
+              // Recuperação bem sucedida
+              return {
+                 success: true,
+                 purchaseToken: existingPurchase.purchaseToken,
+                 orderId: existingPurchase.orderId,
+                 productId: productId
+              };
+           }
+        }
+      } catch (recoveryError) {
+        console.error('Erro ao tentar recuperar compra:', recoveryError);
+      }
     }
     
     return {
