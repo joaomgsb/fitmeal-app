@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "assets": "npx @capacitor/assets generate"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.1",
@@ -17,6 +18,8 @@
     "@capacitor/device": "^7.0.2",
     "@capacitor/filesystem": "^7.1.4",
     "@capacitor/share": "^7.0.2",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0",
     "@react-pdf/renderer": "^4.3.0",
     "@types/date-fns": "^2.5.3",
     "@types/mercadopago": "^1.5.11",

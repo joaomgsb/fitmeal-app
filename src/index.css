@@ -2,6 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Safe area para apps nativos (Capacitor) */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Prevenir movimento da navbar durante scroll no mobile */
+html {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+}
+
+body {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  position: relative;
+}
+
+/* Garantir que elementos fixos não se movam */
+header[class*="fixed"],
+header.macbook-navbar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform: translate3d(0, 0, 0) !important;
+  -webkit-transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  -webkit-perspective: 1000 !important;
+  perspective: 1000 !important;
+}
+
+/* Prevenir qualquer movimento dos elementos dentro da navbar no mobile */
+@media (max-width: 1024px) {
+  header[class*="fixed"] *,
+  header.macbook-navbar * {
+    transform: translate3d(0, 0, 0) !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+  }
+}
+
 /* Estilos para vídeos responsivos */
 .video-container {
   position: relative;
