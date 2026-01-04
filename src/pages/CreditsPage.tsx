@@ -17,6 +17,8 @@ import {
 } from '../lib/billingService';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const CreditsPage: React.FC = () => {
   const { credits, loading: creditsLoading, reload } = useCredits();
@@ -34,7 +36,7 @@ const CreditsPage: React.FC = () => {
       await initializeBilling();
     };
     initBilling();
-  }, []);
+  }, [currentUser]);
 
   const loadProducts = async () => {
     try {
@@ -44,6 +46,7 @@ const CreditsPage: React.FC = () => {
       console.error('Erro ao carregar produtos:', error);
     }
   };
+
 
   const handlePurchase = async (product: BillingProduct) => {
     if (!currentUser) {
@@ -65,21 +68,41 @@ const CreditsPage: React.FC = () => {
 
       if (result.success && result.purchaseToken) {
         // Verificar a compra antes de adicionar créditos
-        const { verifyPurchase } = await import('../lib/billingService');
+        const { verifyPurchase, consumePurchase } = await import('../lib/billingService');
         const isValid = await verifyPurchase(result.purchaseToken);
 
         if (isValid) {
-          // Adicionar créditos ao usuário
+          // Adicionar créditos ao usuário (com verificação de duplicação)
           const { addCredits } = await import('../lib/creditsService');
-          await addCredits(
+          const wasProcessed = await addCredits(
             currentUser.uid,
             product.credits,
             product.id,
-            `Compra: ${product.title}`
+            `Compra: ${product.title}`,
+            result.purchaseToken,
+            result.orderId
           );
 
-          await reload();
-          toast.success(`${product.credits} crédito(s) adicionado(s) com sucesso!`);
+          if (wasProcessed) {
+            // APÓS adicionar créditos com sucesso, consumir a compra (apenas para produtos consumíveis)
+            // Isso permite que o mesmo produto possa ser comprado novamente
+            if (product.type === 'consumable') {
+              const consumed = await consumePurchase(result.purchaseToken);
+              if (!consumed) {
+                console.error('Erro ao consumir compra após adicionar créditos. PurchaseToken:', result.purchaseToken);
+                // Não reverter créditos, apenas logar o erro
+                // O consumo pode ser tentado novamente na próxima inicialização
+              } else {
+                console.log('Compra consumida com sucesso. Produto pode ser comprado novamente.');
+              }
+            }
+            // Para assinaturas, não consumir (apenas acknowledge, que já é feito no Java)
+
+            await reload();
+            toast.success(`${product.credits} crédito(s) adicionado(s) com sucesso!`);
+          } else {
+            toast.error('Esta compra já foi processada anteriormente. Se você não recebeu os créditos, entre em contato com o suporte.');
+          }
         } else {
           toast.error('Falha na verificação da compra. Entre em contato com o suporte.');
         }
@@ -277,7 +300,7 @@ const CreditsPage: React.FC = () => {
                     </p>
 
                     <div className="mb-4">
-                      <div className="flex items-baseline gap-2">
+                      <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="text-3xl font-bold text-primary-600">
                           {product.price}
                         </span>

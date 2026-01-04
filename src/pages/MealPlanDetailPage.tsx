@@ -15,6 +15,9 @@ import PlanFeatures from '../components/meal-plan/PlanFeatures';
 import PreparationTips from '../components/meal-plan/PreparationTips';
 import FoodSubstitutions from '../components/meal-plan/FoodSubstitutions';
 import DownloadPDFButton from '../components/meal-plan/DownloadPDFButton';
+import { useCredits } from '../hooks/useCredits';
+import { useAuth } from '../contexts/AuthContext';
+import { getUserCredits } from '../lib/creditsService';
 
 interface Food {
   name: string;
@@ -370,12 +373,59 @@ const MealPlanDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const generatedPlan = location.state?.generatedPlan as GeneratedPlan;
+  const generatedPlan = location.state?.generatedPlan as GeneratedPlan & { usedFreeCredit?: boolean };
   const plan = id ? mealPlans[id] : null;
   const { savePlan, savedPlans } = useMealPlans();
   const [isSaving, setIsSaving] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
   const planSavedRef = useRef(false);
+  const { currentUser } = useAuth();
+  const { credits } = useCredits();
+  const [isLimitedPlan, setIsLimitedPlan] = useState(false);
+
+  // Verificar se o plano deve estar bloqueado baseado nos créditos atuais
+  useEffect(() => {
+    const checkIfLimited = async () => {
+      if (!generatedPlan || !currentUser) {
+        setIsLimitedPlan(false);
+        return;
+      }
+
+          // Se o plano foi gerado com crédito grátis, verificar se ainda deve estar bloqueado
+      if (generatedPlan.usedFreeCredit) {
+        try {
+          const userCredits = await getUserCredits(currentUser.uid);
+          
+          // Calcular créditos grátis restantes
+          const freeCreditTransactions = userCredits.transactions.filter(
+            t => t.type === 'purchase' && t.productId === 'welcome_bonus'
+          );
+          const totalFreeCredits = freeCreditTransactions.reduce((sum, t) => sum + t.amount, 0);
+          const consumedFreeCredits = userCredits.transactions
+            .filter(t => t.type === 'consumption')
+            .length;
+          const remainingFreeCredits = totalFreeCredits - consumedFreeCredits;
+          
+          // Verificar se comprou créditos pagos (qualquer compra que não seja welcome_bonus)
+          const hasPaidCredits = userCredits.transactions.some(
+            t => t.type === 'purchase' && t.productId !== 'welcome_bonus' && t.purchaseToken
+          );
+          
+          // Desbloquear se: ainda tem créditos grátis disponíveis OU comprou créditos pagos
+          // Bloquear apenas se: não tem mais créditos grátis E nunca comprou créditos pagos
+          setIsLimitedPlan(remainingFreeCredits <= 0 && !hasPaidCredits);
+        } catch (error) {
+          console.error('Erro ao verificar créditos:', error);
+          // Em caso de erro, usar o valor do state original
+          setIsLimitedPlan(generatedPlan.usedFreeCredit || false);
+        }
+      } else {
+        setIsLimitedPlan(false);
+      }
+    };
+
+    checkIfLimited();
+  }, [generatedPlan, currentUser, credits]);
 
   const planData = generatedPlan ? {
     title: 'Plano Personalizado',
@@ -683,33 +733,96 @@ const MealPlanDetailPage: React.FC = () => {
             </div>
 
             {/* Daily Schedule */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-8 relative">
               <h2 className="text-xl font-bold mb-8">Cronograma Diário</h2>
               <div className="space-y-8">
-                {planData!.schedule.map((meal, index) => (
-                  <MealCard
-                    key={index}
-                    time={meal.time}
-                    name={meal.name}
-                    foods={meal.foods || []}
-                    totalCalories={meal.macros.calories}
-                    totalProtein={meal.macros.protein}
-                    totalCarbs={meal.macros.carbs}
-                    totalFat={meal.macros.fat}
-                  />
-                ))}
+                {planData!.schedule.map((meal, index) => {
+                  const isBlurred = isLimitedPlan && index >= Math.floor(planData!.schedule.length / 2);
+                  return (
+                    <div key={index} className={isBlurred ? 'relative' : ''}>
+                      {isBlurred && (
+                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+                          <div className="text-center p-6">
+                            <AlertCircle className="w-12 h-12 text-primary-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-bold text-neutral-800 mb-2">
+                              Conteúdo Premium
+                            </h3>
+                            <p className="text-neutral-600 mb-4 max-w-md">
+                              Para ver o plano completo, compre créditos e gere um novo plano personalizado.
+                            </p>
+                            <Link
+                              to="/creditos"
+                              className="inline-block px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
+                            >
+                              Comprar Créditos
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                      <div className={isBlurred ? 'opacity-30 pointer-events-none' : ''}>
+                        <MealCard
+                          time={meal.time}
+                          name={meal.name}
+                          foods={meal.foods || []}
+                          totalCalories={meal.macros.calories}
+                          totalProtein={meal.macros.protein}
+                          totalCarbs={meal.macros.carbs}
+                          totalFat={meal.macros.fat}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {generatedPlan && (
               <>
                 {/* Dicas de Preparação */}
-                <div className="mb-8">
+                <div className={`mb-8 relative ${isLimitedPlan ? 'opacity-30 pointer-events-none' : ''}`}>
+                  {isLimitedPlan && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+                      <div className="text-center p-6">
+                        <AlertCircle className="w-12 h-12 text-primary-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-neutral-800 mb-2">
+                          Conteúdo Premium
+                        </h3>
+                        <p className="text-neutral-600 mb-4">
+                          Compre créditos para ver todas as dicas e substituições.
+                        </p>
+                        <Link
+                          to="/creditos"
+                          className="inline-block px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
+                        >
+                          Comprar Créditos
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                   <PreparationTips tips={generatedPlan.tips} />
                 </div>
 
                 {/* Substituições */}
-                <div className="mb-8">
+                <div className={`mb-8 relative ${isLimitedPlan ? 'opacity-30 pointer-events-none' : ''}`}>
+                  {isLimitedPlan && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+                      <div className="text-center p-6">
+                        <AlertCircle className="w-12 h-12 text-primary-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-neutral-800 mb-2">
+                          Conteúdo Premium
+                        </h3>
+                        <p className="text-neutral-600 mb-4">
+                          Compre créditos para ver todas as substituições de alimentos.
+                        </p>
+                        <Link
+                          to="/creditos"
+                          className="inline-block px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
+                        >
+                          Comprar Créditos
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                   <FoodSubstitutions substitutions={generatedPlan.substitutions} />
                 </div>
               </>

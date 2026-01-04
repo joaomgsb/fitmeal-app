@@ -76,15 +76,16 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
 
       if (savedPlan) {
         // Consumir crédito após gerar o plano com sucesso
-        const creditConsumed = await consume(savedPlan.id, 'Geração de plano personalizado');
+        const creditResult = await consume(savedPlan.id, 'Geração de plano personalizado');
         
-        if (!creditConsumed) {
+        if (!creditResult.success) {
           // Se não conseguiu consumir o crédito, não deve acontecer, mas vamos tratar
           setError('Erro ao processar crédito. O plano foi gerado, mas entre em contato com o suporte.');
           return;
         }
 
-        onPlanGenerated(plan);
+        // Passar informação se foi usado crédito grátis
+        onPlanGenerated({ ...plan, usedFreeCredit: creditResult.usedFreeCredit });
       } else {
         setError('Erro ao salvar o plano. Tente novamente.');
       }

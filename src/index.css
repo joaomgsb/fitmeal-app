@@ -13,16 +13,37 @@
   }
 }
 
+/* Garantir que o conteúdo não fique por trás da status bar no Android */
+html {
+  /* Usar viewport-fit=cover já está no index.html */
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+body {
+  /* Adicionar padding superior apenas em dispositivos móveis nativos */
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Para elementos fixos no topo, adicionar safe area */
+header[class*="fixed"],
+header.macbook-navbar {
+  padding-top: env(safe-area-inset-top, 0) !important;
+}
+
 /* Prevenir movimento da navbar durante scroll no mobile */
 html {
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
+  overflow-x: hidden;
 }
 
 body {
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
   position: relative;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Garantir que elementos fixos não se movam */
@@ -42,6 +63,12 @@ header.macbook-navbar {
 
 /* Prevenir qualquer movimento dos elementos dentro da navbar no mobile */
 @media (max-width: 1024px) {
+  html, body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
   header[class*="fixed"] *,
   header.macbook-navbar * {
     transform: translate3d(0, 0, 0) !important;

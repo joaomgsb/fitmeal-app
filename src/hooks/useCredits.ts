@@ -39,26 +39,26 @@ export const useCredits = () => {
     loadCredits();
   }, [currentUser]);
 
-  const consume = async (planId: string, description?: string): Promise<boolean> => {
+  const consume = async (planId: string, description?: string): Promise<{ success: boolean; usedFreeCredit?: boolean }> => {
     if (!currentUser) {
       toast.error('Você precisa estar logado para gerar planos');
-      return false;
+      return { success: false };
     }
 
     try {
-      const success = await consumeCredit(currentUser.uid, planId, description);
-      if (success) {
+      const result = await consumeCredit(currentUser.uid, planId, description);
+      if (result.success) {
         await loadCredits(); // Recarregar créditos
         toast.success('Crédito consumido com sucesso!');
-        return true;
+        return result;
       } else {
         toast.error('Você não possui créditos suficientes');
-        return false;
+        return { success: false };
       }
     } catch (err: any) {
       console.error('Erro ao consumir crédito:', err);
       toast.error(err.message || 'Erro ao consumir crédito');
-      return false;
+      return { success: false };
     }
   };
 

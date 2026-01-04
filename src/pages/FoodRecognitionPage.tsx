@@ -9,14 +9,19 @@ import {
   RefreshCw,
   AlertCircle
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import ImageUpload from '../components/food-recognition/ImageUpload';
 import FoodRecognitionResults from '../components/food-recognition/FoodRecognitionResults';
 import { recognizeFoodFromImage, FoodRecognitionResult } from '../lib/openai';
 import { logCameraInfo } from '../utils/cameraTest';
+import { useAuth } from '../contexts/AuthContext';
+import { useCredits } from '../hooks/useCredits';
 
 const FoodRecognitionPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  const { credits, checkHasCredits, consume } = useCredits();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<FoodRecognitionResult | null>(null);
@@ -28,6 +33,20 @@ const FoodRecognitionPage: React.FC = () => {
   }, []);
 
   const handleImageSelected = async (url: string) => {
+    if (!currentUser) {
+      toast.error('Você precisa estar logado para usar o reconhecimento de alimentos');
+      navigate('/login');
+      return;
+    }
+
+    // Verificar se tem créditos
+    const hasCredits = await checkHasCredits(1);
+    if (!hasCredits) {
+      setError('Você não possui créditos suficientes. Compre créditos para usar o reconhecimento de alimentos.');
+      toast.error('Créditos insuficientes');
+      return;
+    }
+
     setImageUrl(url);
     setError(null);
     setResult(null);
@@ -36,7 +55,16 @@ const FoodRecognitionPage: React.FC = () => {
     try {
       const recognitionResult = await recognizeFoodFromImage(url);
       setResult(recognitionResult);
-      toast.success('Análise concluída com sucesso!');
+      
+      // Consumir crédito após análise bem-sucedida
+      const planId = `recognition_${Date.now()}`;
+      const creditConsumed = await consume(planId, 'Reconhecimento de alimentos por IA');
+      
+      if (creditConsumed) {
+        toast.success('Análise concluída com sucesso! 1 crédito foi utilizado.');
+      } else {
+        toast.error('Erro ao consumir crédito. Entre em contato com o suporte.');
+      }
     } catch (error) {
       console.error('Erro no reconhecimento:', error);
       setError('Erro ao analisar a imagem. Tente novamente.');
@@ -151,11 +179,34 @@ const FoodRecognitionPage: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="mb-8"
             >
+              {currentUser && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Créditos disponíveis:</strong> {credits?.credits || 0}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Cada análise utiliza 1 crédito
+                  </p>
+                </div>
+              )}
               <ImageUpload
                 onImageSelected={handleImageSelected}
                 onError={handleError}
                 isLoading={isLoading}
               />
+              {!currentUser && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                  <p className="text-sm text-yellow-800 mb-2">
+                    Você precisa estar logado para usar o reconhecimento de alimentos
+                  </p>
+                  <Link
+                    to="/login"
+                    className="inline-block px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                  >
+                    Fazer Login
+                  </Link>
+                </div>
+              )}
             </motion.div>
           )}
 

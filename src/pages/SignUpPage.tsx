@@ -156,6 +156,7 @@ const SignUpPage: React.FC = () => {
     try {
       setError('');
       setLoading(true);
+      
       const userCredential = await signUp(email, password);
       
       // Criar perfil inicial do usuário
@@ -191,12 +192,37 @@ const SignUpPage: React.FC = () => {
           name,
           'signup'
         );
+        
+        // Adicionar 3 créditos grátis de boas-vindas
+        const { addCredits } = await import('../lib/creditsService');
+        await addCredits(
+          userCredential.user.uid,
+          3,
+          'welcome_bonus',
+          'Créditos de boas-vindas - Bem-vindo ao FitMeal!'
+        );
       }
       
       navigate('/perfil');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar conta:', error);
-      setError('Falha ao criar conta. Tente novamente.');
+      
+      // Tratar erros específicos do Firebase
+      let errorMessage = 'Falha ao criar conta. Tente novamente.';
+      
+      if (error?.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este email já está cadastrado. Tente fazer login ou use outro email.';
+      } else if (error?.code === 'auth/invalid-email') {
+        errorMessage = 'Email inválido. Verifique o email digitado.';
+      } else if (error?.code === 'auth/weak-password') {
+        errorMessage = 'Senha muito fraca. Use pelo menos 6 caracteres.';
+      } else if (error?.code === 'auth/network-request-failed') {
+        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -331,6 +357,7 @@ const SignUpPage: React.FC = () => {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={18} />
                 </div>
               </div>
+              
               <button
                 type="button"
                 onClick={() => {

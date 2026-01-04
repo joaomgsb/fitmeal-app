@@ -7,6 +7,8 @@ export interface CreditTransaction {
   amount: number; // positivo para compra, negativo para consumo
   productId?: string; // ID do produto comprado
   planId?: string; // ID do plano gerado (para consumo)
+  purchaseToken?: string; // Token da compra do Google Play (para evitar duplicação)
+  orderId?: string; // ID do pedido do Google Play
   // Usamos string ISO em vez de serverTimestamp() dentro de arrays,
   // pois o Firestore não permite serverTimestamp() em campos de array.
   timestamp: string;
@@ -42,10 +44,17 @@ export async function getUserCredits(userId: string): Promise<UserCredits> {
     return creditsSnap.data() as UserCredits;
   }
 
-  // Criar documento inicial com 0 créditos
+  // Criar documento inicial com 3 créditos grátis para novos usuários
   const initialCredits: UserCredits = {
-    credits: 0,
-    transactions: [],
+    credits: 3,
+    transactions: [{
+      id: Date.now().toString(),
+      type: 'purchase',
+      amount: 3,
+      productId: 'welcome_bonus',
+      description: 'Créditos de boas-vindas',
+      timestamp: new Date().toISOString()
+    }],
     subscriptions: [],
     lastUpdated: serverTimestamp()
   };
@@ -61,11 +70,29 @@ export async function addCredits(
   userId: string,
   amount: number,
   productId: string,
-  description: string
-): Promise<void> {
+  description: string,
+  purchaseToken?: string,
+  orderId?: string
+): Promise<boolean> {
   const creditsRef = doc(db, 'users', userId, 'credits', 'data');
   const creditsSnap = await getDoc(creditsRef);
 
+  // Se temos um purchaseToken, verificar se já foi processado antes
+  if (purchaseToken) {
+    if (creditsSnap.exists()) {
+      const currentData = creditsSnap.data() as UserCredits;
+      const existingTransaction = currentData.transactions.find(
+        t => t.purchaseToken === purchaseToken
+      );
+      
+      if (existingTransaction) {
+        console.log('Compra já processada anteriormente. PurchaseToken:', purchaseToken);
+        return false; // Compra já foi processada
+      }
+    }
+  }
+
+  // Criar transação removendo campos undefined (Firestore não aceita undefined)
   const transaction: CreditTransaction = {
     id: Date.now().toString(),
     type: 'purchase',
@@ -73,7 +100,9 @@ export async function addCredits(
     productId,
     // Usamos a data do cliente porque serverTimestamp() não é permitido em arrays
     timestamp: new Date().toISOString(),
-    description
+    description,
+    ...(purchaseToken && { purchaseToken }),
+    ...(orderId && { orderId })
   };
 
   if (creditsSnap.exists()) {
@@ -91,6 +120,8 @@ export async function addCredits(
       lastUpdated: serverTimestamp()
     });
   }
+
+  return true; // Compra processada com sucesso
 }
 
 /**
@@ -100,7 +131,7 @@ export async function consumeCredit(
   userId: string,
   planId: string,
   description: string = 'Geração de plano personalizado'
-): Promise<boolean> {
+): Promise<{ success: boolean; usedFreeCredit?: boolean }> {
   const creditsRef = doc(db, 'users', userId, 'credits', 'data');
   const creditsSnap = await getDoc(creditsRef);
 
@@ -111,8 +142,19 @@ export async function consumeCredit(
   const currentData = creditsSnap.data() as UserCredits;
 
   if (currentData.credits < 1) {
-    return false; // Sem créditos suficientes
+    return { success: false }; // Sem créditos suficientes
   }
+
+  // Verificar se o usuário ainda tem créditos grátis (welcome_bonus)
+  const freeCreditTransactions = currentData.transactions.filter(
+    t => t.type === 'purchase' && t.productId === 'welcome_bonus'
+  );
+  const totalFreeCredits = freeCreditTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const consumedFreeCredits = currentData.transactions
+    .filter(t => t.type === 'consumption' && t.planId?.startsWith('plan_'))
+    .length;
+  const remainingFreeCredits = totalFreeCredits - consumedFreeCredits;
+  const usedFreeCredit = remainingFreeCredits > 0;
 
   const transaction: CreditTransaction = {
     id: Date.now().toString(),
@@ -130,7 +172,7 @@ export async function consumeCredit(
     lastUpdated: serverTimestamp()
   });
 
-  return true;
+  return { success: true, usedFreeCredit };
 }
 
 /**

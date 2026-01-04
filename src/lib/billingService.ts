@@ -201,11 +201,8 @@ export async function purchaseProduct(productId: string): Promise<{
     });
     
     if (result.success && result.purchaseToken) {
-      // Para produtos consumíveis, consumir imediatamente
-      if (product.type === 'consumable') {
-        await GooglePlayBilling.consumePurchase({ purchaseToken: result.purchaseToken });
-      }
-      
+      // NÃO consumir aqui! O consumo deve acontecer APÓS adicionar créditos com sucesso
+      // Retornar a compra para ser processada (verificar, adicionar créditos, depois consumir)
       return {
         success: true,
         purchaseToken: result.purchaseToken,
@@ -215,30 +212,38 @@ export async function purchaseProduct(productId: string): Promise<{
     }
     
     // Tratamento para erro "Item Already Owned" (Código 7)
-    // Se o usuário já possui o item, tentamos consumi-lo para liberar nova compra
-    if (!result.success && result.error && (result.error.includes('7') || result.error.includes('already owned'))) {
-      console.log('Item já adquirido. Tentando recuperar e consumir...');
+    // Tentar recuperar a compra existente e processá-la
+    if (!result.success && result.error && (result.error.includes('7') || result.error.includes('already owned') || result.error.includes('Esse item já é seu'))) {
+      console.log('Item já adquirido. Tentando recuperar compra existente...');
       
       try {
+        // Buscar compras não consumidas
         const purchasesResult = await GooglePlayBilling.queryPurchases({ type: 'inapp' });
         const existingPurchase = purchasesResult.purchases?.find((p: any) => p.productId === productId);
 
         if (existingPurchase && product.type === 'consumable') {
-           console.log('Compra encontrada. Consumindo agora...');
-           const consumeResult = await GooglePlayBilling.consumePurchase({ purchaseToken: existingPurchase.purchaseToken });
-           
-           if (consumeResult.success) {
-              // Recuperação bem sucedida
-              return {
-                 success: true,
-                 purchaseToken: existingPurchase.purchaseToken,
-                 orderId: existingPurchase.orderId,
-                 productId: productId
-              };
-           }
+          console.log('Compra existente encontrada. Retornando para processamento...');
+          // Retornar a compra existente para ser processada
+          // O consumo será feito após adicionar créditos
+          return {
+            success: true,
+            purchaseToken: existingPurchase.purchaseToken,
+            orderId: existingPurchase.orderId,
+            productId: productId
+          };
+        } else {
+          // Se não encontrou ou não é consumível, retornar erro
+          return {
+            success: false,
+            error: 'Este item já foi comprado e processado anteriormente. Se você não recebeu os créditos, entre em contato com o suporte.'
+          };
         }
       } catch (recoveryError) {
         console.error('Erro ao tentar recuperar compra:', recoveryError);
+        return {
+          success: false,
+          error: 'Este item já foi comprado. Se você não recebeu os créditos, entre em contato com o suporte.'
+        };
       }
     }
     

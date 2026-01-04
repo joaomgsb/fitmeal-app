@@ -327,28 +327,66 @@ const RecipesPage: React.FC = () => {
                 Tentar novamente
               </button>
             </div>
-          ) : fetchedRecipes && fetchedRecipes?.recipes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {fetchedRecipes?.recipes
-                .filter((recipe) => {
-                  const matchDifficulty = selectedDifficulty
-                    ? inferDifficulty(recipe) ===
-                      selectedDifficulty.toLowerCase()
-                    : true;
+          ) : fetchedRecipes && fetchedRecipes?.recipes.length > 0 ? (() => {
+            // Filtrar receitas com base na pesquisa e filtros
+            const filteredRecipes = fetchedRecipes.recipes.filter((recipe) => {
+              // Filtro de pesquisa
+              const matchSearch = searchTerm
+                ? recipe.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  recipe.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  recipe.keywords?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  recipe.recipeIngredient?.some((ingredient: string) =>
+                    ingredient.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                : true;
 
-                  const matchCategory = selectedCategory
-                    ? recipe.recipeCategory
-                        ?.toLowerCase()
-                        .replace(/\s+/g, "-") === selectedCategory
-                    : true;
+              // Filtro de dificuldade
+              const matchDifficulty = selectedDifficulty
+                ? inferDifficulty(recipe) ===
+                  selectedDifficulty.toLowerCase()
+                : true;
 
-                  return matchDifficulty && matchCategory;
-                })
-                .map((recipe) => (
+              // Filtro de categoria
+              const matchCategory = selectedCategory
+                ? recipe.recipeCategory
+                    ?.toLowerCase()
+                    .replace(/\s+/g, "-") === selectedCategory
+                : true;
+
+              return matchSearch && matchDifficulty && matchCategory;
+            });
+
+            // Se não houver receitas após o filtro, mostrar mensagem
+            if (filteredRecipes.length === 0) {
+              return (
+                <div className="text-center py-12 bg-neutral-50 rounded-lg border border-neutral-200">
+                  <h3 className="text-xl font-semibold mb-2">
+                    Nenhuma receita encontrada
+                  </h3>
+                  <p className="text-neutral-600 mb-4">
+                    {searchTerm
+                      ? `Não encontramos receitas com "${searchTerm}". Tente buscar por outros termos.`
+                      : "Tente ajustar os filtros ou buscar por outros termos."}
+                  </p>
+                  <button
+                    onClick={resetFilters}
+                    className="text-primary-500 font-medium hover:text-primary-600 transition-colors"
+                  >
+                    Limpar todos os filtros
+                  </button>
+                </div>
+              );
+            }
+
+            // Mostrar receitas filtradas
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {filteredRecipes.map((recipe) => (
                   <RecipeCard key={recipe._id} recipe={recipe} />
                 ))}
-            </div>
-          ) : fetchedRecipes?.total === 0 ? (
+              </div>
+            );
+          })() : fetchedRecipes?.total === 0 ? (
             <div className="text-center py-12 bg-neutral-50 rounded-lg border border-neutral-200">
               <h3 className="text-lg font-medium text-neutral-600 mb-2">
                 Nenhuma receita encontrada
