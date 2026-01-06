@@ -5,6 +5,7 @@ import { generateMealPlan } from '../../lib/openai';
 import { useProfile } from '../../hooks/useProfile';
 import { useCredits } from '../../hooks/useCredits';
 import { useMealPlans } from '../../hooks/useMealPlans';
+import { toast } from 'react-hot-toast';
 
 interface GenerateMealPlanButtonProps {
   onPlanGenerated: (plan: any) => void;
@@ -68,27 +69,40 @@ const GenerateMealPlanButton: React.FC<GenerateMealPlanButtonProps> = ({ onPlanG
 
       const plan = await generateMealPlan(userData);
       
-      // Salvar o plano primeiro para obter o ID
-      const savedPlan = await savePlan({
-        ...plan,
-        isCustomPlan: true
-      });
-
-      if (savedPlan) {
-        // Consumir crédito após gerar o plano com sucesso
-        const creditResult = await consume(savedPlan.id, 'Geração de plano personalizado');
-        
-        if (!creditResult.success) {
-          // Se não conseguiu consumir o crédito, não deve acontecer, mas vamos tratar
-          setError('Erro ao processar crédito. O plano foi gerado, mas entre em contato com o suporte.');
-          return;
-        }
-
-        // Passar informação se foi usado crédito grátis
-        onPlanGenerated({ ...plan, usedFreeCredit: creditResult.usedFreeCredit });
-      } else {
-        setError('Erro ao salvar o plano. Tente novamente.');
+      // Gerar um ID temporário para o plano (usado para registrar o consumo)
+      const tempPlanId = `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Consumir crédito após gerar o plano com sucesso
+      const creditResult = await consume(tempPlanId, 'Geração de plano personalizado');
+      
+      if (!creditResult.success) {
+        setError('Erro ao processar crédito. Entre em contato com o suporte.');
+        return;
       }
+
+      // Se foi usado crédito PAGO, salvar automaticamente
+      // Se foi usado crédito GRÁTIS, NÃO salvar (o botão de salvar fica bloqueado)
+      if (!creditResult.usedFreeCredit) {
+        try {
+          const savedPlan = await savePlan({
+            ...plan,
+            isCustomPlan: true
+          });
+          
+          if (savedPlan) {
+            toast.success('Plano salvo automaticamente!', {
+              icon: '✅',
+              duration: 3000
+            });
+          }
+        } catch (saveError) {
+          console.error('Erro ao salvar plano automaticamente:', saveError);
+          // Não bloquear a visualização se falhar o salvamento
+        }
+      }
+
+      // Passar informação se foi usado crédito grátis
+      onPlanGenerated({ ...plan, usedFreeCredit: creditResult.usedFreeCredit, isCustomPlan: true });
     } catch (error) {
       console.error('Erro ao gerar plano:', error);
       setError('Não foi possível gerar o plano. Tente novamente mais tarde.');

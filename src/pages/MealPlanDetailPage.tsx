@@ -15,9 +15,6 @@ import PlanFeatures from '../components/meal-plan/PlanFeatures';
 import PreparationTips from '../components/meal-plan/PreparationTips';
 import FoodSubstitutions from '../components/meal-plan/FoodSubstitutions';
 import DownloadPDFButton from '../components/meal-plan/DownloadPDFButton';
-import { useCredits } from '../hooks/useCredits';
-import { useAuth } from '../contexts/AuthContext';
-import { getUserCredits } from '../lib/creditsService';
 
 interface Food {
   name: string;
@@ -379,53 +376,27 @@ const MealPlanDetailPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
   const planSavedRef = useRef(false);
-  const { currentUser } = useAuth();
-  const { credits } = useCredits();
   const [isLimitedPlan, setIsLimitedPlan] = useState(false);
 
-  // Verificar se o plano deve estar bloqueado baseado nos créditos atuais
+  // Verificar se o plano deve estar bloqueado
+  // REGRA: Se o plano foi gerado com crédito grátis, SEMPRE bloquear!
+  // Não importa se o usuário comprou créditos depois - o plano gerado com crédito grátis fica bloqueado para sempre.
+  // Se quiser um plano desbloqueado, precisa usar um crédito PAGO para gerar um NOVO plano.
   useEffect(() => {
-    const checkIfLimited = async () => {
-      if (!generatedPlan || !currentUser) {
-        setIsLimitedPlan(false);
-        return;
-      }
+    if (!generatedPlan) {
+      setIsLimitedPlan(false);
+      return;
+    }
 
-          // Se o plano foi gerado com crédito grátis, verificar se ainda deve estar bloqueado
-      if (generatedPlan.usedFreeCredit) {
-        try {
-          const userCredits = await getUserCredits(currentUser.uid);
-          
-          // Calcular créditos grátis restantes
-          const freeCreditTransactions = userCredits.transactions.filter(
-            t => t.type === 'purchase' && t.productId === 'welcome_bonus'
-          );
-          const totalFreeCredits = freeCreditTransactions.reduce((sum, t) => sum + t.amount, 0);
-          const consumedFreeCredits = userCredits.transactions
-            .filter(t => t.type === 'consumption')
-            .length;
-          const remainingFreeCredits = totalFreeCredits - consumedFreeCredits;
-          
-          // Verificar se comprou créditos pagos (qualquer compra que não seja welcome_bonus)
-          const hasPaidCredits = userCredits.transactions.some(
-            t => t.type === 'purchase' && t.productId !== 'welcome_bonus' && t.purchaseToken
-          );
-          
-          // Desbloquear se: ainda tem créditos grátis disponíveis OU comprou créditos pagos
-          // Bloquear apenas se: não tem mais créditos grátis E nunca comprou créditos pagos
-          setIsLimitedPlan(remainingFreeCredits <= 0 && !hasPaidCredits);
-        } catch (error) {
-          console.error('Erro ao verificar créditos:', error);
-          // Em caso de erro, usar o valor do state original
-          setIsLimitedPlan(generatedPlan.usedFreeCredit || false);
-        }
-      } else {
-        setIsLimitedPlan(false);
-      }
-    };
-
-    checkIfLimited();
-  }, [generatedPlan, currentUser, credits]);
+    // Se o plano foi gerado com crédito grátis = SEMPRE BLOQUEADO
+    // Não tem verificação adicional - crédito grátis = plano bloqueado, ponto final.
+    if (generatedPlan.usedFreeCredit === true) {
+      setIsLimitedPlan(true);
+    } else {
+      // Plano gerado com crédito pago = liberado
+      setIsLimitedPlan(false);
+    }
+  }, [generatedPlan]);
 
   const planData = generatedPlan ? {
     title: 'Plano Personalizado',
@@ -482,6 +453,15 @@ const MealPlanDetailPage: React.FC = () => {
   const reallyIsAlreadySaved = isAlreadySaved || hasSaved;
 
   const handleSavePlan = async () => {
+    // Bloquear se for plano limitado (crédito grátis)
+    if (isLimitedPlan) {
+      toast.error('Função bloqueada! Compre créditos para salvar planos.', {
+        icon: '🔒',
+        duration: 4000
+      });
+      return;
+    }
+
     if (reallyIsAlreadySaved) {
       toast.error('Este plano já está salvo!');
       return;
@@ -621,16 +601,29 @@ const MealPlanDetailPage: React.FC = () => {
         </div>
 
         {/* Card "Salvar Plano" */}
-        <div className="bg-primary-500 rounded-xl shadow-sm p-6 text-white mb-6">
+        <div className="bg-primary-500 rounded-xl shadow-sm p-6 text-white mb-6 relative overflow-hidden">
+          {isLimitedPlan && (
+            <div className="absolute inset-0 bg-primary-700/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+              <AlertCircle className="w-10 h-10 mb-3 text-white" />
+              <p className="text-sm font-bold mb-2 text-white">Função Bloqueada</p>
+              <p className="text-xs text-primary-100 mb-3">Compre créditos para desbloquear</p>
+              <Link
+                to="/creditos"
+                className="bg-white text-primary-600 px-5 py-2 rounded-lg text-sm font-bold hover:bg-primary-50 transition-colors"
+              >
+                Comprar Créditos
+              </Link>
+            </div>
+          )}
           <h2 className="text-lg font-bold mb-2">Salvar Plano</h2>
           <p className="text-primary-50 mb-4">
             Salve este plano para acessá-lo facilmente depois e acompanhar seu progresso.
           </p>
           <button
             onClick={handleSavePlan}
-            disabled={reallyIsAlreadySaved || isSaving}
+            disabled={reallyIsAlreadySaved || isSaving || isLimitedPlan}
             className={`w-full ${
-              reallyIsAlreadySaved || isSaving
+              reallyIsAlreadySaved || isSaving || isLimitedPlan
                 ? 'bg-primary-400 cursor-not-allowed'
                 : 'bg-white hover:bg-primary-50'
             } text-primary-600 text-center py-2 rounded-lg font-medium transition-colors`}
@@ -655,27 +648,42 @@ const MealPlanDetailPage: React.FC = () => {
         </div>
 
         {/* Card "Baixar PDF" */}
-        <div className="bg-red-500 rounded-xl shadow-sm p-6 text-white mb-6">
+        <div className="bg-red-500 rounded-xl shadow-sm p-6 text-white mb-6 relative overflow-hidden">
+          {isLimitedPlan && (
+            <div className="absolute inset-0 bg-red-700/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 text-center">
+              <AlertCircle className="w-10 h-10 mb-3 text-white" />
+              <p className="text-sm font-bold mb-2 text-white">Download Bloqueado</p>
+              <p className="text-xs text-red-100 mb-3">Compre créditos para baixar o PDF</p>
+              <Link
+                to="/creditos"
+                className="bg-white text-red-600 px-5 py-2 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors"
+              >
+                Comprar Créditos
+              </Link>
+            </div>
+          )}
           <h2 className="text-lg font-bold mb-2">Baixar Plano</h2>
           <p className="text-red-50 mb-4">
             Faça o download do seu plano em PDF para consulta offline.
           </p>
-          <DownloadPDFButton
-            meals={generatedPlan?.meals || plan!.schedule.map(meal => ({
-              time: meal.time,
-              name: meal.name,
-              description: meal.description,
-              foods: meal.foods,
-              totalCalories: meal.macros.calories,
-              totalProtein: meal.macros.protein,
-              totalCarbs: meal.macros.carbs,
-              totalFat: meal.macros.fat
-            }))}
-            totalDailyCalories={totalCalories}
-            totalDailyProtein={totalProtein}
-            totalDailyCarbs={totalCarbs}
-            totalDailyFat={totalFat}
-          />
+          <div className={isLimitedPlan ? 'pointer-events-none opacity-50' : ''}>
+            <DownloadPDFButton
+              meals={generatedPlan?.meals || plan!.schedule.map(meal => ({
+                time: meal.time,
+                name: meal.name,
+                description: meal.description,
+                foods: meal.foods,
+                totalCalories: meal.macros.calories,
+                totalProtein: meal.macros.protein,
+                totalCarbs: meal.macros.carbs,
+                totalFat: meal.macros.fat
+              }))}
+              totalDailyCalories={totalCalories}
+              totalDailyProtein={totalProtein}
+              totalDailyCarbs={totalCarbs}
+              totalDailyFat={totalFat}
+            />
+          </div>
         </div>
       </>
     );
@@ -741,25 +749,27 @@ const MealPlanDetailPage: React.FC = () => {
                   return (
                     <div key={index} className={isBlurred ? 'relative' : ''}>
                       {isBlurred && (
-                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
-                          <div className="text-center p-6">
-                            <AlertCircle className="w-12 h-12 text-primary-500 mx-auto mb-4" />
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-white/95 backdrop-blur-md z-10 rounded-lg flex items-center justify-center border-2 border-dashed border-primary-200">
+                          <div className="text-center p-6 bg-white/90 rounded-2xl shadow-xl border border-primary-100 max-w-sm mx-4">
+                            <div className="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <AlertCircle className="w-7 h-7 text-primary-600" />
+                            </div>
                             <h3 className="text-lg font-bold text-neutral-800 mb-2">
-                              Conteúdo Premium
+                              Conteúdo Bloqueado
                             </h3>
-                            <p className="text-neutral-600 mb-4 max-w-md">
-                              Para ver o plano completo, compre créditos e gere um novo plano personalizado.
+                            <p className="text-neutral-600 mb-4 text-sm">
+                              Você está usando créditos gratuitos. Compre créditos para desbloquear o plano completo!
                             </p>
                             <Link
                               to="/creditos"
-                              className="inline-block px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
+                              className="inline-block w-full py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-bold shadow-lg shadow-primary-200"
                             >
-                              Comprar Créditos
+                              Desbloquear Agora
                             </Link>
                           </div>
                         </div>
                       )}
-                      <div className={isBlurred ? 'opacity-30 pointer-events-none' : ''}>
+                      <div className={isBlurred ? 'blur-[8px] opacity-30 pointer-events-none select-none' : ''}>
                         <MealCard
                           time={meal.time}
                           name={meal.name}
@@ -779,51 +789,41 @@ const MealPlanDetailPage: React.FC = () => {
             {generatedPlan && (
               <>
                 {/* Dicas de Preparação */}
-                <div className={`mb-8 relative ${isLimitedPlan ? 'opacity-30 pointer-events-none' : ''}`}>
+                <div className={`mb-8 relative ${isLimitedPlan ? 'pointer-events-none' : ''}`}>
                   {isLimitedPlan && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
-                      <div className="text-center p-6">
-                        <AlertCircle className="w-12 h-12 text-primary-500 mx-auto mb-4" />
-                        <h3 className="text-lg font-bold text-neutral-800 mb-2">
-                          Conteúdo Premium
-                        </h3>
-                        <p className="text-neutral-600 mb-4">
-                          Compre créditos para ver todas as dicas e substituições.
-                        </p>
-                        <Link
-                          to="/creditos"
-                          className="inline-block px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
-                        >
-                          Comprar Créditos
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-white/95 backdrop-blur-md z-10 rounded-lg flex items-center justify-center border-2 border-dashed border-amber-200">
+                      <div className="text-center p-5 bg-white/90 rounded-xl shadow-lg border border-amber-100">
+                        <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                        <h3 className="text-sm font-bold text-neutral-800 mb-1">Dicas Bloqueadas</h3>
+                        <p className="text-xs text-neutral-600 mb-3">Compre créditos para liberar</p>
+                        <Link to="/creditos" className="text-xs font-bold text-primary-600 hover:underline">
+                          Ver Créditos →
                         </Link>
                       </div>
                     </div>
                   )}
-                  <PreparationTips tips={generatedPlan.tips} />
+                  <div className={isLimitedPlan ? 'blur-[6px] opacity-30 select-none' : ''}>
+                    <PreparationTips tips={generatedPlan.tips} />
+                  </div>
                 </div>
 
                 {/* Substituições */}
-                <div className={`mb-8 relative ${isLimitedPlan ? 'opacity-30 pointer-events-none' : ''}`}>
+                <div className={`mb-8 relative ${isLimitedPlan ? 'pointer-events-none' : ''}`}>
                   {isLimitedPlan && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
-                      <div className="text-center p-6">
-                        <AlertCircle className="w-12 h-12 text-primary-500 mx-auto mb-4" />
-                        <h3 className="text-lg font-bold text-neutral-800 mb-2">
-                          Conteúdo Premium
-                        </h3>
-                        <p className="text-neutral-600 mb-4">
-                          Compre créditos para ver todas as substituições de alimentos.
-                        </p>
-                        <Link
-                          to="/creditos"
-                          className="inline-block px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
-                        >
-                          Comprar Créditos
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-white/95 backdrop-blur-md z-10 rounded-lg flex items-center justify-center border-2 border-dashed border-green-200">
+                      <div className="text-center p-5 bg-white/90 rounded-xl shadow-lg border border-green-100">
+                        <AlertCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                        <h3 className="text-sm font-bold text-neutral-800 mb-1">Substituições Bloqueadas</h3>
+                        <p className="text-xs text-neutral-600 mb-3">Compre créditos para liberar</p>
+                        <Link to="/creditos" className="text-xs font-bold text-primary-600 hover:underline">
+                          Ver Créditos →
                         </Link>
                       </div>
                     </div>
                   )}
-                  <FoodSubstitutions substitutions={generatedPlan.substitutions} />
+                  <div className={isLimitedPlan ? 'blur-[6px] opacity-30 select-none' : ''}>
+                    <FoodSubstitutions substitutions={generatedPlan.substitutions} />
+                  </div>
                 </div>
               </>
             )}

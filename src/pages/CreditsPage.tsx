@@ -3,50 +3,70 @@ import { motion } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
 import { 
   Coins, ShoppingCart, CreditCard, CheckCircle, 
-  Crown, Zap, Star, TrendingUp, ArrowRight, Loader2,
-  AlertCircle, Sparkles
+  Crown, ArrowRight, Loader2,
+  Sparkles, Gift
 } from 'lucide-react';
 import { useCredits } from '../hooks/useCredits';
 import { useAuth } from '../contexts/AuthContext';
+import { useProfile } from '../hooks/useProfile';
 import { 
   BILLING_PRODUCTS, 
   BillingProduct, 
   purchaseProduct,
   isBillingAvailable,
-  openSubscriptionManagement
+  openSubscriptionManagement,
+  initializeBilling,
+  getAvailableProducts
 } from '../lib/billingService';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 
 const CreditsPage: React.FC = () => {
   const { credits, loading: creditsLoading, reload } = useCredits();
+  const { profile, loading: profileLoading } = useProfile();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = useState<BillingProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [purchasingProductId, setPurchasingProductId] = useState<string | null>(null);
 
+  // O VIP é liberado se hasDiscount for true OU se referralCount >= 10
+  const hasDiscount = profile?.hasDiscount === true || (profile?.referralCount || 0) >= 10;
+
   useEffect(() => {
-    loadProducts();
-    // Inicializar billing quando a página carregar
-    const initBilling = async () => {
-      const { initializeBilling } = await import('../lib/billingService');
-      await initializeBilling();
+    // Inicializar billing e carregar produtos quando a página carregar
+    const initPage = async () => {
+      // Sempre começar com produtos locais (fallback)
+      setProducts(BILLING_PRODUCTS);
+      
+      // Pequeno delay para garantir que a página renderizou antes de chamadas nativas
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Tentar carregar produtos do Google Play apenas se disponível
+      if (isBillingAvailable()) {
+        try {
+          await initializeBilling();
+        } catch (initError) {
+          console.warn('Erro ao inicializar billing (não crítico):', initError);
+        }
+        
+        try {
+          const availableProducts = await getAvailableProducts();
+          if (availableProducts && Array.isArray(availableProducts) && availableProducts.length > 0) {
+            setProducts(availableProducts);
+          }
+        } catch (productsError) {
+          console.warn('Erro ao buscar produtos (usando fallback):', productsError);
+        }
+      }
     };
-    initBilling();
+    
+    initPage();
   }, [currentUser]);
 
-  const loadProducts = async () => {
-    try {
-      const availableProducts = await import('../lib/billingService').then(m => m.BILLING_PRODUCTS);
-      setProducts(availableProducts);
-    } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
-    }
+  const calculateVipCredits = (originalCredits: number) => {
+    return Math.max(originalCredits + 1, Math.round(originalCredits * 1.25));
   };
-
 
   const handlePurchase = async (product: BillingProduct) => {
     if (!currentUser) {
@@ -74,44 +94,47 @@ const CreditsPage: React.FC = () => {
         if (isValid) {
           // Adicionar créditos ao usuário (com verificação de duplicação)
           const { addCredits } = await import('../lib/creditsService');
+          
+          // Aplicar bônus de 25% se o usuário for VIP
+          const creditsToAdd = hasDiscount 
+            ? calculateVipCredits(product.credits) 
+            : product.credits;
+
+          console.log(`Processando compra VIP: ${hasDiscount}, Original: ${product.credits}, Final: ${creditsToAdd}`);
+
           const wasProcessed = await addCredits(
             currentUser.uid,
-            product.credits,
+            creditsToAdd,
             product.id,
-            `Compra: ${product.title}`,
+            `Compra: ${product.title}${hasDiscount ? ' (Bônus VIP aplicado)' : ''}`,
             result.purchaseToken,
             result.orderId
           );
 
           if (wasProcessed) {
             // APÓS adicionar créditos com sucesso, consumir a compra (apenas para produtos consumíveis)
-            // Isso permite que o mesmo produto possa ser comprado novamente
             if (product.type === 'consumable') {
-              const consumed = await consumePurchase(result.purchaseToken);
-              if (!consumed) {
-                console.error('Erro ao consumir compra após adicionar créditos. PurchaseToken:', result.purchaseToken);
-                // Não reverter créditos, apenas logar o erro
-                // O consumo pode ser tentado novamente na próxima inicialização
-              } else {
-                console.log('Compra consumida com sucesso. Produto pode ser comprado novamente.');
-              }
+              await consumePurchase(result.purchaseToken);
             }
-            // Para assinaturas, não consumir (apenas acknowledge, que já é feito no Java)
 
             await reload();
-            toast.success(`${product.credits} crédito(s) adicionado(s) com sucesso!`);
+            toast.success(`${creditsToAdd} crédito(s) adicionado(s) com sucesso!${hasDiscount ? ' (Com bônus VIP!)' : ''}`, {
+              duration: 5000,
+              icon: hasDiscount ? '🎁' : '✅'
+            });
           } else {
-            toast.error('Esta compra já foi processada anteriormente. Se você não recebeu os créditos, entre em contato com o suporte.');
+            toast.error('Esta compra já foi processada anteriormente.');
           }
         } else {
-          toast.error('Falha na verificação da compra. Entre em contato com o suporte.');
+          toast.error('Falha na verificação da compra.');
         }
       } else {
         toast.error(result.error || 'Erro ao processar compra');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao comprar:', error);
-      toast.error(error.message || 'Erro ao processar compra');
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao processar compra';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
       setPurchasingProductId(null);
@@ -153,17 +176,35 @@ const CreditsPage: React.FC = () => {
               </p>
 
               {/* Current Credits Display */}
-              {credits && (
-                <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-full px-8 py-4 border border-white/30">
-                  <Sparkles className="w-6 h-6 text-white" />
-                  <div className="text-left">
-                    <p className="text-primary-100 text-sm">Seus Créditos</p>
-                    <p className="text-2xl font-bold text-white">
-                      {credits.credits} {credits.credits === 1 ? 'crédito' : 'créditos'}
-                    </p>
+              <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
+                {!creditsLoading && credits && (
+                  <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-full px-8 py-4 border border-white/30">
+                    <Sparkles className="w-6 h-6 text-white" />
+                    <div className="text-left">
+                      <p className="text-primary-100 text-sm">Seus Créditos</p>
+                      <p className="text-2xl font-bold text-white">
+                        {credits.credits} {credits.credits === 1 ? 'crédito' : 'créditos'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {!profileLoading && hasDiscount && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="inline-flex items-center gap-3 bg-green-500/30 backdrop-blur-sm rounded-full px-8 py-4 border border-green-400/50 shadow-lg"
+                  >
+                    <Gift className="w-6 h-6 text-white" />
+                    <div className="text-left">
+                      <p className="text-green-100 text-sm">Status: VIP</p>
+                      <p className="text-lg font-bold text-white uppercase tracking-tight">
+                        +25% de Bônus Ativado!
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
           </div>
         </section>
@@ -210,9 +251,23 @@ const CreditsPage: React.FC = () => {
                           {product.price}
                         </span>
                       </div>
-                      <p className="text-neutral-500 text-sm mt-1">
-                        {product.credits} {product.credits === 1 ? 'crédito' : 'créditos'}
-                      </p>
+                      <div className="text-neutral-500 text-sm mt-1">
+                        {hasDiscount ? (
+                          <div className="flex flex-col">
+                            <span className="text-neutral-400 line-through text-xs">
+                              {product.credits} {product.credits === 1 ? 'crédito' : 'créditos'}
+                            </span>
+                            <span className="flex items-center gap-1 text-green-600 font-bold text-base">
+                              <Sparkles className="w-4 h-4" />
+                              {calculateVipCredits(product.credits)} créditos (Bônus VIP!)
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-base">
+                            {product.credits} {product.credits === 1 ? 'crédito' : 'créditos'}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <ul className="space-y-2 mb-6">
@@ -306,9 +361,23 @@ const CreditsPage: React.FC = () => {
                         </span>
                         <span className="text-neutral-500">/mês</span>
                       </div>
-                      <p className="text-neutral-500 text-sm mt-1">
-                        {product.credits} {product.credits === 1 ? 'crédito' : 'créditos'} por mês
-                      </p>
+                      <div className="text-neutral-500 text-sm mt-1">
+                        {hasDiscount ? (
+                          <div className="flex flex-col">
+                            <span className="text-neutral-400 line-through text-xs">
+                              {product.credits} {product.credits === 1 ? 'crédito' : 'créditos'}/mês
+                            </span>
+                            <span className="flex items-center gap-1 text-green-600 font-bold text-base">
+                              <Sparkles className="w-4 h-4" />
+                              {calculateVipCredits(product.credits)} créditos/mês (Bônus VIP!)
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-base">
+                            {product.credits} {product.credits === 1 ? 'crédito' : 'créditos'} por mês
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <ul className="space-y-2 mb-6 flex-grow">

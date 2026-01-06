@@ -65,6 +65,7 @@ export async function getUserCredits(userId: string): Promise<UserCredits> {
 
 /**
  * Adiciona créditos ao usuário (após compra)
+ * Se o usuário for VIP (indicou 10+ amigos), ele ganha 25% de bônus
  */
 export async function addCredits(
   userId: string,
@@ -75,19 +76,45 @@ export async function addCredits(
   orderId?: string
 ): Promise<boolean> {
   const creditsRef = doc(db, 'users', userId, 'credits', 'data');
-  const creditsSnap = await getDoc(creditsRef);
+  const userRef = doc(db, 'users', userId);
+  
+  const [creditsSnap, userSnap] = await Promise.all([
+    getDoc(creditsRef),
+    getDoc(userRef)
+  ]);
 
   // Se temos um purchaseToken, verificar se já foi processado antes
-  if (purchaseToken) {
-    if (creditsSnap.exists()) {
-      const currentData = creditsSnap.data() as UserCredits;
-      const existingTransaction = currentData.transactions.find(
-        t => t.purchaseToken === purchaseToken
-      );
-      
-      if (existingTransaction) {
-        console.log('Compra já processada anteriormente. PurchaseToken:', purchaseToken);
-        return false; // Compra já foi processada
+  if (purchaseToken && creditsSnap.exists()) {
+    const currentData = creditsSnap.data() as UserCredits;
+    const existingTransaction = currentData.transactions.find(
+      t => t.purchaseToken === purchaseToken
+    );
+    
+    if (existingTransaction) {
+      console.log('Compra já processada anteriormente. PurchaseToken:', purchaseToken);
+      return false; // Compra já foi processada
+    }
+  }
+
+  // Verificar se o usuário é VIP para aplicar bônus (caso não tenha sido aplicado no frontend)
+  let finalAmount = amount;
+  let finalDescription = description;
+
+  if (userSnap.exists()) {
+    const userData = userSnap.data();
+    const isVip = userData.hasDiscount === true || (userData.referralCount || 0) >= 10;
+    
+    // Se o usuário for VIP e o bônus ainda não estiver na descrição
+    const alreadyHasBonus = description.includes('Bônus VIP');
+    
+    if (isVip && !alreadyHasBonus) {
+      // Se o amount for igual ao valor padrão do produto, aplicamos o bônus aqui por segurança
+      // (Isso protege caso o frontend não tenha aplicado o bônus)
+      // Só aplica para recargas e assinaturas
+      if (productId.startsWith('recharge_') || productId.startsWith('subscription_')) {
+        finalAmount = Math.max(amount + 1, Math.round(amount * 1.25));
+        finalDescription = `${description} (Bônus VIP aplicado automaticamente)`;
+        console.log(`Bônus VIP aplicado no service: ${amount} -> ${finalAmount}`);
       }
     }
   }
@@ -96,11 +123,11 @@ export async function addCredits(
   const transaction: CreditTransaction = {
     id: Date.now().toString(),
     type: 'purchase',
-    amount,
+    amount: finalAmount,
     productId,
     // Usamos a data do cliente porque serverTimestamp() não é permitido em arrays
     timestamp: new Date().toISOString(),
-    description,
+    description: finalDescription,
     ...(purchaseToken && { purchaseToken }),
     ...(orderId && { orderId })
   };
@@ -108,13 +135,13 @@ export async function addCredits(
   if (creditsSnap.exists()) {
     const currentData = creditsSnap.data() as UserCredits;
     await updateDoc(creditsRef, {
-      credits: increment(amount),
+      credits: increment(finalAmount),
       transactions: [...currentData.transactions, transaction],
       lastUpdated: serverTimestamp()
     });
   } else {
     await setDoc(creditsRef, {
-      credits: amount,
+      credits: finalAmount,
       transactions: [transaction],
       subscriptions: [],
       lastUpdated: serverTimestamp()

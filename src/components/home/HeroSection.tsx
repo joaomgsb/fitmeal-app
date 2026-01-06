@@ -59,7 +59,7 @@ const HeroSection: React.FC = () => {
             className="flex flex-col sm:flex-row gap-4"
           >
             <Link
-              to="/perfil"
+              to="/planos"
               className="bg-primary-500 hover:bg-primary-600 text-white font-medium px-8 py-3 rounded-lg inline-flex items-center justify-center transition-colors shadow-lg" 
             >
               Começar Agora <ChevronRight size={18} className="ml-1" />

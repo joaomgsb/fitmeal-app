@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   User, Edit2, LogOut, Save,
   Dumbbell, BarChart, LineChart, Trash2,
-  Scale, Ruler, Calculator
+  Scale, Ruler, Calculator, Share2, Copy, Check, Gift
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
@@ -61,6 +61,10 @@ export interface UserProfile {
     category: 'front' | 'back' | 'side' | 'other';
     notes?: string;
   }>;
+  referralCode?: string;
+  referredBy?: string;
+  referralCount?: number;
+  hasDiscount?: boolean;
 }
 
 interface SavedPlan {
@@ -82,8 +86,9 @@ interface SavedPlan {
 
 const ProfilePage: React.FC = () => {
   const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'perfil' | 'progresso' | 'planos' | 'calculadoras'>('perfil');
+  const [activeTab, setActiveTab] = useState<'perfil' | 'progresso' | 'planos' | 'calculadoras' | 'indicacoes'>('perfil');
   const [isEditing, setIsEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showBodyFatModal, setShowBodyFatModal] = useState(false);
   const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
@@ -571,6 +576,16 @@ const ProfilePage: React.FC = () => {
                 >
                   <Calculator size={18} />
                   <span>Calculadoras</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('indicacoes')}
+                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${activeTab === 'indicacoes'
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                >
+                  <Share2 size={18} />
+                  <span>Indicações</span>
                 </button>
               </div>
 
@@ -1464,6 +1479,102 @@ const ProfilePage: React.FC = () => {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="p-6">
                   <CalculatorTab />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'indicacoes' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-neutral-100">
+                    <h2 className="text-xl font-bold text-neutral-800">Indique e Ganhe</h2>
+                    <p className="text-neutral-500 text-sm mt-1">
+                      Convide seus amigos e ganhe descontos exclusivos!
+                    </p>
+                  </div>
+                  
+                  <div className="p-6">
+                    <div className="bg-primary-50 border border-primary-100 rounded-xl p-6 mb-8 text-center">
+                      <h3 className="text-lg font-semibold text-primary-900 mb-2">Seu Código de Indicação</h3>
+                      <div className="flex items-center justify-center gap-2 mb-4">
+                        <div className="bg-white border-2 border-dashed border-primary-300 px-6 py-3 rounded-lg text-2xl font-bold text-primary-600 tracking-wider">
+                          {localProfile.referralCode || '---'}
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (localProfile.referralCode) {
+                              navigator.clipboard.writeText(localProfile.referralCode);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                              toast.success('Código copiado!');
+                            }
+                          }}
+                          className="p-3 bg-white border border-neutral-200 rounded-lg text-neutral-600 hover:text-primary-500 hover:border-primary-200 transition-all shadow-sm"
+                        >
+                          {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
+                        </button>
+                      </div>
+                      <p className="text-primary-700 text-sm">
+                        Compartilhe este código com amigos que ainda não usam o FitMeal.
+                      </p>
+                    </div>
+
+                    <div className="space-y-8">
+                      <div>
+                        <div className="flex justify-between items-end mb-2">
+                          <div>
+                            <h3 className="font-bold text-neutral-800">Progresso de Indicações</h3>
+                            <p className="text-sm text-neutral-500">Cada 10 amigos que criarem conta usando seu código, você ganha!</p>
+                          </div>
+                          <span className="text-lg font-bold text-primary-600">
+                            {localProfile.referralCount || 0}/10
+                          </span>
+                        </div>
+                        
+                        <div className="w-full h-4 bg-neutral-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary-500 transition-all duration-500 ease-out"
+                            style={{ width: `${Math.min(((localProfile.referralCount || 0) / 10) * 100, 100)}%` }}
+                          />
+                        </div>
+                        
+                        {(localProfile.referralCount || 0) >= 10 ? (
+                          <div className="mt-4 p-4 bg-green-50 border border-green-100 rounded-lg flex items-center gap-3 text-green-700">
+                            <Gift size={24} />
+                            <div>
+                              <p className="font-bold">Parabéns! Você atingiu a meta!</p>
+                              <p className="text-sm">Você agora tem 20% de desconto em todos os produtos do app.</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-4 text-sm text-neutral-600 text-center">
+                            Faltam {10 - (localProfile.referralCount || 0)} indicações para você desbloquear seu desconto de 20%.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 border border-neutral-100 rounded-xl bg-neutral-50">
+                          <h4 className="font-semibold text-neutral-800 mb-1 flex items-center gap-2">
+                            <Check size={16} className="text-primary-500" />
+                            Como funciona?
+                          </h4>
+                          <p className="text-sm text-neutral-600">
+                            Seu amigo insere seu código no momento do cadastro. Assim que a conta dele for criada, você ganha 1 ponto no seu progresso.
+                          </p>
+                        </div>
+                        <div className="p-4 border border-neutral-100 rounded-xl bg-neutral-50">
+                          <h4 className="font-semibold text-neutral-800 mb-1 flex items-center gap-2">
+                            <Gift size={16} className="text-primary-500" />
+                            Qual o prêmio?
+                          </h4>
+                          <p className="text-sm text-neutral-600">
+                            Ao completar 10 indicações, você recebe um desconto vitalício de 20% em todas as assinaturas e créditos dentro do app.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

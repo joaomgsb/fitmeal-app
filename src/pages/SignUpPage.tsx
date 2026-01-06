@@ -3,15 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Mail, Lock, User, AlertCircle, Activity, Calculator, Heart } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, Calculator, Share2 } from 'lucide-react';
 import TermsOfUseModal from '../components/TermsOfUseModal';
 import { recordTermsAcceptanceWithAudit } from '../lib/termsService';
+import { generateReferralCode } from '../utils/referral';
+import { query, collection, where, getDocs, updateDoc, increment } from 'firebase/firestore';
 
 const SignUpPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [referralCodeInput, setReferralCodeInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
@@ -161,6 +164,35 @@ const SignUpPage: React.FC = () => {
       
       // Criar perfil inicial do usuário
       if (userCredential.user) {
+        const myReferralCode = generateReferralCode(name);
+        let referredByUid = null;
+
+        // Se informou um código de indicação, verificar se é válido
+        if (referralCodeInput.trim()) {
+          const usersRef = collection(db, 'users');
+          const q = query(usersRef, where('referralCode', '==', referralCodeInput.trim()));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            const referrerDoc = querySnapshot.docs[0];
+            referredByUid = referrerDoc.id;
+            const referrerData = referrerDoc.data();
+            const currentCount = (referrerData.referralCount || 0) + 1;
+            
+            // Incrementar o contador de quem indicou
+            await updateDoc(doc(db, 'users', referredByUid), {
+              referralCount: increment(1)
+            });
+
+            // Verificar se atingiu 10 indicações para dar o desconto
+            if (currentCount >= 10 && !referrerData.hasDiscount) {
+              await updateDoc(doc(db, 'users', referredByUid), {
+                hasDiscount: true
+              });
+            }
+          }
+        }
+
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           name,
           email,
@@ -182,7 +214,11 @@ const SignUpPage: React.FC = () => {
           customFatNeeds: knowsCalorieNeeds ? Number(customFatNeeds) : 0,
           dietPreferences,
           allergies: allergies ? allergies.split(',').map(a => a.trim()) : [],
-          startDate: new Date().toISOString()
+          startDate: new Date().toISOString(),
+          referralCode: myReferralCode,
+          referredBy: referralCodeInput.trim() || null,
+          referralCount: 0,
+          hasDiscount: false
         });
 
         // Registrar aceitação dos termos de uso
@@ -356,6 +392,22 @@ const SignUpPage: React.FC = () => {
                   />
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={18} />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Código de Indicação (opcional)</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={referralCodeInput}
+                    onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                    placeholder="Ex: JOAO12345"
+                    className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                  <Share2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={18} />
+                </div>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Se você recebeu um código de convite, insira-o aqui.
+                </p>
               </div>
               
               <button

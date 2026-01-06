@@ -319,31 +319,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
       
-      {/* CTA Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold font-display mb-6">
-            Pronto para transformar sua nutrição?
-          </h2>
-          <p className="text-neutral-600 max-w-2xl mx-auto mb-10">
-            Junte-se a milhares de pessoas que estão atingindo seus objetivos fitness com alimentação inteligente e personalizada.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              to="/perfil"
-              className="bg-primary-500 text-white px-8 py-3 rounded-lg font-medium hover:bg-primary-600 transition-colors shadow-md"
-            >
-              Criar Conta Grátis
-            </Link>
-            <Link
-              to="/receitas"
-              className="bg-white text-neutral-700 border border-neutral-300 px-8 py-3 rounded-lg font-medium hover:bg-neutral-50 transition-colors"
-            >
-              Explorar Receitas
-            </Link>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

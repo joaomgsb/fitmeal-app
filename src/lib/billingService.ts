@@ -1,5 +1,4 @@
 import { Capacitor } from '@capacitor/core';
-import { Platform } from '@capacitor/core';
 import GooglePlayBilling from '../plugins/GooglePlayBilling';
 
 // IDs dos produtos no Google Play Console
@@ -94,23 +93,34 @@ async function checkUnconsumedPurchases() {
     // Consultar compras INAPP (consumíveis)
     const result = await GooglePlayBilling.queryPurchases({ type: 'inapp' });
     
-    if (result.purchases && result.purchases.length > 0) {
+    if (result && result.purchases && Array.isArray(result.purchases) && result.purchases.length > 0) {
       console.log('Encontradas compras não consumidas:', result.purchases.length);
       
       for (const purchase of result.purchases) {
+        // Verificar se purchase é válido e tem os campos necessários
+        if (!purchase || !purchase.productId || !purchase.purchaseToken) {
+          continue;
+        }
+        
         // Verificar se é um produto consumível nosso
         const product = BILLING_PRODUCTS.find(p => p.id === purchase.productId);
         
         if (product && product.type === 'consumable') {
           console.log(`Consumindo compra pendente: ${purchase.productId}`);
-          await GooglePlayBilling.consumePurchase({ purchaseToken: purchase.purchaseToken });
+          try {
+            await GooglePlayBilling.consumePurchase({ purchaseToken: purchase.purchaseToken });
+          } catch (consumeError) {
+            console.warn('Erro ao consumir compra individual:', consumeError);
+          }
         }
       }
     }
   } catch (error) {
-    console.error('Erro ao verificar compras não consumidas:', error);
+    console.warn('Erro ao verificar compras não consumidas (não crítico):', error);
   }
 }
+
+let isInitializing = false;
 
 /**
  * Inicializa o serviço de billing
@@ -120,6 +130,9 @@ export async function initializeBilling(): Promise<void> {
     console.warn('Billing não está disponível nesta plataforma');
     return;
   }
+
+  if (isInitializing) return;
+  isInitializing = true;
 
   try {
     const result = await GooglePlayBilling.initialize();
@@ -131,6 +144,8 @@ export async function initializeBilling(): Promise<void> {
     }
   } catch (error) {
     console.error('Erro ao inicializar Google Play Billing:', error);
+  } finally {
+    isInitializing = false;
   }
 }
 
@@ -143,27 +158,39 @@ export async function getAvailableProducts(): Promise<BillingProduct[]> {
   }
 
   try {
-    // Passar lista completa com tipos para o plugin
-    const productsRequest = BILLING_PRODUCTS.map(p => ({
+    // Passar produtos com seus tipos para o plugin nativo
+    // 'consumable' -> 'inapp', 'subscription' -> 'subscription'
+    const productsWithTypes = BILLING_PRODUCTS.map(p => ({
       id: p.id,
-      type: p.type
+      type: p.type === 'consumable' ? 'inapp' as const : 'subscription' as const
     }));
     
-    const result = await GooglePlayBilling.getProducts({ products: productsRequest });
+    const result = await GooglePlayBilling.getProducts({ products: productsWithTypes });
     
-    if (result.products && result.products.length > 0) {
+    if (result && result.products && Array.isArray(result.products) && result.products.length > 0) {
       // Mapear produtos do Google Play para nosso formato
-      return result.products.map(product => {
+      const mappedProducts: BillingProduct[] = [];
+      
+      for (const product of result.products) {
         const staticProduct = BILLING_PRODUCTS.find(p => p.id === product.id);
-        return {
-          ...staticProduct!,
-          price: product.price,
-          // Manter outros dados do produto estático
-        };
-      });
+        if (staticProduct && product.price) {
+          mappedProducts.push({
+            ...staticProduct,
+            price: product.price,
+          });
+        }
+      }
+      
+      // Se conseguiu mapear alguns produtos, retorna eles
+      if (mappedProducts.length > 0) {
+        // Adiciona produtos que não foram encontrados no Google Play (usando valores estáticos)
+        const foundIds = mappedProducts.map(p => p.id);
+        const missingProducts = BILLING_PRODUCTS.filter(p => !foundIds.includes(p.id));
+        return [...mappedProducts, ...missingProducts];
+      }
     }
   } catch (error) {
-    console.error('Erro ao buscar produtos:', error);
+    console.warn('Erro ao buscar produtos do Google Play (usando fallback):', error);
   }
 
   return BILLING_PRODUCTS; // Fallback para produtos estáticos
@@ -196,8 +223,7 @@ export async function purchaseProduct(productId: string): Promise<{
     }
 
     const result = await GooglePlayBilling.purchaseProduct({ 
-      productId,
-      type: product.type 
+      productId
     });
     
     if (result.success && result.purchaseToken) {
