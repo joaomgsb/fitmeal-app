@@ -6,6 +6,9 @@ import { useScrollToTop } from './hooks/useScrollToTop';
 import PrivateRoute from './components/auth/PrivateRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import { Toaster } from 'react-hot-toast';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
+
 // Layouts
 import MainLayout from './layouts/MainLayout';
 
@@ -31,9 +34,31 @@ import AdminNewsPage from './pages/AdminNewsPage';
 import TermsOfUsePage from './pages/TermsOfUsePage';
 import AdminTermsPage from './pages/AdminTermsPage';
 import CreditsPage from './pages/CreditsPage';
+import MyCreditsPage from './pages/MyCreditsPage';
 
 function AppContent() {
   useScrollToTop();
+
+  // Configurar a status bar quando o app iniciar (apenas no Android/iOS)
+  useEffect(() => {
+    const configureStatusBar = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          // Garantir que a status bar NÃO sobreponha o conteúdo
+          await StatusBar.setOverlaysWebView({ overlay: false });
+          // Definir cor de fundo da status bar (branco/cinza claro)
+          await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+          // Configurar estilo dos ícones (Dark = ícones ESCUROS/PRETOS para fundo claro)
+          await StatusBar.setStyle({ style: Style.Dark });
+        } catch (error) {
+          // Ignorar erros se o plugin não estiver disponível
+          console.log('StatusBar plugin não disponível:', error);
+        }
+      }
+    };
+
+    configureStatusBar();
+  }, []);
 
   return (
     <Routes>
@@ -50,6 +75,7 @@ function AppContent() {
             <Route path="lista-compras" element={<PrivateRoute><ShoppingListPage /></PrivateRoute>} />
             <Route path="perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
             <Route path="creditos" element={<PrivateRoute><CreditsPage /></PrivateRoute>} />
+            <Route path="meus-creditos" element={<PrivateRoute><MyCreditsPage /></PrivateRoute>} />
             <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
             <Route path="admin/termos" element={<AdminRoute><AdminTermsPage /></AdminRoute>} />
             <Route path="news" element={<NewsPage />} />
@@ -70,7 +96,17 @@ function App() {
     <AuthProvider>
       <TourProvider>
         <AppContent />
-        <Toaster position="top-right" />
+        <Toaster 
+          position="top-center" 
+          containerStyle={{
+            top: 100, // Deixa o toast mais embaixo para não ser cortado pela navbar
+          }}
+          toastOptions={{
+            style: {
+              maxWidth: '90vw',
+            },
+          }}
+        />
       </TourProvider>
     </AuthProvider>
   );

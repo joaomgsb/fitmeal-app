@@ -20,6 +20,9 @@ import {
 } from '../lib/billingService';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { isUserVip } from '../config/vipConfig';
 
 const CreditsPage: React.FC = () => {
   const { credits, loading: creditsLoading, reload } = useCredits();
@@ -30,8 +33,8 @@ const CreditsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [purchasingProductId, setPurchasingProductId] = useState<string | null>(null);
 
-  // O VIP é liberado se hasDiscount for true OU se referralCount >= 10
-  const hasDiscount = profile?.hasDiscount === true || (profile?.referralCount || 0) >= 10;
+  // O VIP é liberado se hasDiscount for true OU se referralCount >= REQUIRED_REFERRALS
+  const hasDiscount = isUserVip(profile?.hasDiscount, profile?.referralCount);
 
   useEffect(() => {
     // Inicializar billing e carregar produtos quando a página carregar
@@ -115,6 +118,16 @@ const CreditsPage: React.FC = () => {
             // APÓS adicionar créditos com sucesso, consumir a compra (apenas para produtos consumíveis)
             if (product.type === 'consumable') {
               await consumePurchase(result.purchaseToken);
+            }
+
+            // Se usou o bônus VIP, resetar o status VIP para reiniciar o ciclo
+            if (hasDiscount && currentUser) {
+              await updateDoc(doc(db, 'users', currentUser.uid), {
+                hasDiscount: false,
+                referralCount: 0,
+                lastVipUsedAt: new Date().toISOString()
+              });
+              console.log('VIP resetado após uso do bônus. Ciclo reiniciado.');
             }
 
             await reload();

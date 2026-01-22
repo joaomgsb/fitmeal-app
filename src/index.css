@@ -4,24 +4,16 @@
 
 /* Safe area para apps nativos (Capacitor) */
 @supports (padding-top: env(safe-area-inset-top)) {
-  body {
-    padding-top: env(safe-area-inset-top);
-  }
-  
   .safe-area-top {
     padding-top: env(safe-area-inset-top);
   }
 }
 
 /* Garantir que o conteúdo não fique por trás da status bar no Android */
-html {
-  /* Usar viewport-fit=cover já está no index.html */
-  padding-top: env(safe-area-inset-top, 0);
-}
-
-body {
-  /* Adicionar padding superior apenas em dispositivos móveis nativos */
-  padding-top: env(safe-area-inset-top, 0);
+/* Removido padding-top duplicado que causava barra branca */
+html, body {
+  margin: 0;
+  padding: 0;
 }
 
 /* Para elementos fixos no topo, adicionar safe area */

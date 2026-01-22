@@ -21,6 +21,7 @@ import {
 import AvatarUpload from '../components/profile/AvatarUpload';
 import CalculatorTab from '../components/profile/CalculatorTab';
 import ProgressPhotos from '../components/profile/ProgressPhotos';
+import { REQUIRED_REFERRALS, getCooldownRemaining, isUserVip } from '../config/vipConfig';
 
 export interface UserProfile {
   name: string;
@@ -1520,35 +1521,52 @@ const ProfilePage: React.FC = () => {
                     </div>
 
                     <div className="space-y-8">
+                      {/* Mostrar aviso de cooldown se estiver em período de espera */}
+                      {(() => {
+                        const cooldown = getCooldownRemaining(localProfile.lastVipUsedAt);
+                        if (!cooldown.isOver) {
+                          return (
+                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-700">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                              <div>
+                                <p className="font-bold">Período de espera ativo</p>
+                                <p className="text-sm">Você usou seu bônus VIP recentemente. Suas indicações voltarão a contar em {cooldown.remainingText}.</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
                       <div>
                         <div className="flex justify-between items-end mb-2">
                           <div>
                             <h3 className="font-bold text-neutral-800">Progresso de Indicações</h3>
-                            <p className="text-sm text-neutral-500">Cada 10 amigos que criarem conta usando seu código, você ganha!</p>
+                            <p className="text-sm text-neutral-500">Cada {REQUIRED_REFERRALS} amigos que criarem conta usando seu código, você ganha!</p>
                           </div>
                           <span className="text-lg font-bold text-primary-600">
-                            {localProfile.referralCount || 0}/10
+                            {localProfile.referralCount || 0}/{REQUIRED_REFERRALS}
                           </span>
                         </div>
                         
                         <div className="w-full h-4 bg-neutral-100 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-primary-500 transition-all duration-500 ease-out"
-                            style={{ width: `${Math.min(((localProfile.referralCount || 0) / 10) * 100, 100)}%` }}
+                            style={{ width: `${Math.min(((localProfile.referralCount || 0) / REQUIRED_REFERRALS) * 100, 100)}%` }}
                           />
                         </div>
                         
-                        {(localProfile.referralCount || 0) >= 10 ? (
+                        {isUserVip(localProfile.hasDiscount, localProfile.referralCount) ? (
                           <div className="mt-4 p-4 bg-green-50 border border-green-100 rounded-lg flex items-center gap-3 text-green-700">
                             <Gift size={24} />
                             <div>
                               <p className="font-bold">Parabéns! Você atingiu a meta!</p>
-                              <p className="text-sm">Você agora tem 20% de desconto em todos os produtos do app.</p>
+                              <p className="text-sm">Você agora tem 25% de bônus! Use-o na próxima compra para reiniciar o ciclo.</p>
                             </div>
                           </div>
                         ) : (
                           <p className="mt-4 text-sm text-neutral-600 text-center">
-                            Faltam {10 - (localProfile.referralCount || 0)} indicações para você desbloquear seu desconto de 20%.
+                            Faltam {REQUIRED_REFERRALS - (localProfile.referralCount || 0)} indicações para você desbloquear seu bônus de 25%.
                           </p>
                         )}
                       </div>
@@ -1569,7 +1587,7 @@ const ProfilePage: React.FC = () => {
                             Qual o prêmio?
                           </h4>
                           <p className="text-sm text-neutral-600">
-                            Ao completar 10 indicações, você recebe um desconto vitalício de 20% em todas as assinaturas e créditos dentro do app.
+                            Ao completar {REQUIRED_REFERRALS} indicações, você ganha 25% de bônus na próxima compra. Após usar, o ciclo reinicia!
                           </p>
                         </div>
                       </div>

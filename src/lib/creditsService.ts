@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
+import { isUserVip } from '../config/vipConfig';
 
 export interface CreditTransaction {
   id: string;
@@ -102,7 +103,7 @@ export async function addCredits(
 
   if (userSnap.exists()) {
     const userData = userSnap.data();
-    const isVip = userData.hasDiscount === true || (userData.referralCount || 0) >= 10;
+    const isVip = isUserVip(userData.hasDiscount, userData.referralCount);
     
     // Se o usuário for VIP e o bônus ainda não estiver na descrição
     const alreadyHasBonus = description.includes('Bônus VIP');

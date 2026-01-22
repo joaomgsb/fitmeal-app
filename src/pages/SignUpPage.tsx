@@ -177,18 +177,29 @@ const SignUpPage: React.FC = () => {
             const referrerDoc = querySnapshot.docs[0];
             referredByUid = referrerDoc.id;
             const referrerData = referrerDoc.data();
-            const currentCount = (referrerData.referralCount || 0) + 1;
             
-            // Incrementar o contador de quem indicou
-            await updateDoc(doc(db, 'users', referredByUid), {
-              referralCount: increment(1)
-            });
-
-            // Verificar se atingiu 10 indicações para dar o desconto
-            if (currentCount >= 10 && !referrerData.hasDiscount) {
+            // Importar configurações do VIP
+            const { isVipCooldownOver, REQUIRED_REFERRALS } = await import('../config/vipConfig');
+            
+            // Verificar se o cooldown do VIP já passou (só conta indicação se passou)
+            const cooldownOver = isVipCooldownOver(referrerData.lastVipUsedAt);
+            
+            if (cooldownOver) {
+              const currentCount = (referrerData.referralCount || 0) + 1;
+              
+              // Incrementar o contador de quem indicou
               await updateDoc(doc(db, 'users', referredByUid), {
-                hasDiscount: true
+                referralCount: increment(1)
               });
+
+              // Verificar se atingiu as indicações necessárias para dar o desconto
+              if (currentCount >= REQUIRED_REFERRALS && !referrerData.hasDiscount) {
+                await updateDoc(doc(db, 'users', referredByUid), {
+                  hasDiscount: true
+                });
+              }
+            } else {
+              console.log('Indicação não contada: usuário ainda está em período de cooldown do VIP');
             }
           }
         }

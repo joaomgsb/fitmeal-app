@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, User, ChevronDown, Settings, FileText, Newspaper } from 'lucide-react';
+import { Menu, X, User, ChevronDown, Settings, FileText, Newspaper, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useProfile } from '../../hooks/useProfile';
 import { useTour } from '../../contexts/TourContext';
@@ -13,7 +13,7 @@ const Navbar: React.FC = () => {
   const { isTourActive } = useTour();
   const adminDropdownRef = useRef<HTMLDivElement>(null);
 
-  // CSS específico para MacBook M1
+  // CSS específico para MacBook M1 e navegação responsiva
   const macbookCSS = `
     @media (-webkit-device-pixel-ratio: 2) and (min-width: 1440px) and (max-width: 1728px) {
       .macbook-navbar .nav-links {
@@ -40,40 +40,6 @@ const Navbar: React.FC = () => {
     .macbook-navbar .nav-link {
       white-space: nowrap;
       min-width: fit-content;
-    }
-    
-    /* Safe area para apps nativos */
-    @supports (padding-top: env(safe-area-inset-top)) {
-      .macbook-navbar {
-        padding-top: env(safe-area-inset-top) !important;
-      }
-    }
-    
-    /* Garantir que a navbar fique completamente fixa e estática no mobile */
-    .macbook-navbar {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      transform: translate3d(0, 0, 0) !important;
-      -webkit-transform: translate3d(0, 0, 0) !important;
-      backface-visibility: hidden !important;
-      -webkit-backface-visibility: hidden !important;
-    }
-    
-    /* Prevenir movimento durante scroll no mobile */
-    @media (max-width: 1024px) {
-      .macbook-navbar {
-        position: fixed !important;
-        top: 0 !important;
-        transform: translate3d(0, 0, 0) !important;
-        -webkit-transform: translate3d(0, 0, 0) !important;
-      }
-      
-      .macbook-navbar * {
-        transform: translate3d(0, 0, 0) !important;
-        -webkit-transform: translate3d(0, 0, 0) !important;
-      }
     }
   `;
 
@@ -135,18 +101,7 @@ const Navbar: React.FC = () => {
     <>
       <style dangerouslySetInnerHTML={{ __html: macbookCSS }} />
       <header 
-        className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md macbook-navbar safe-area-top" 
-        style={{ 
-          paddingTop: 'env(safe-area-inset-top)',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          transform: 'translate3d(0, 0, 0)',
-          WebkitTransform: 'translate3d(0, 0, 0)',
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden'
-        }}
+        className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md macbook-navbar"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -227,8 +182,23 @@ const Navbar: React.FC = () => {
           {/* User Profile & Mobile Menu Button */}
           <div className="flex items-center space-x-2 sm:space-x-4 ml-8">
             <Link 
+              to="/meus-creditos" 
+              className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-colors ${
+                location.pathname === '/meus-creditos'
+                  ? 'bg-primary-100 text-primary-600'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-primary-100 hover:text-primary-500'
+              }`}
+              title="Meus Créditos"
+            >
+              <Wallet size={20} className="sm:w-6 sm:h-6" />
+            </Link>
+            <Link 
               to="/perfil" 
-              className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-neutral-100 text-neutral-600 hover:bg-primary-100 hover:text-primary-500 transition-colors"
+              className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-colors ${
+                location.pathname === '/perfil'
+                  ? 'bg-primary-100 text-primary-600'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-primary-100 hover:text-primary-500'
+              }`}
             >
               <User size={20} className="sm:w-6 sm:h-6" />
             </Link>
