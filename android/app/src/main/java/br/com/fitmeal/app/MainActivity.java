@@ -6,35 +6,42 @@ import android.view.View;
 import android.view.WindowInsetsController;
 import android.graphics.Color;
 
+import androidx.core.view.WindowCompat;
+
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        registerPlugin(GooglePlayBilling.class);
+        // Conteúdo NÃO desenha por baixo da status bar
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+
         super.onCreate(savedInstanceState);
-        
-        // Configurar status bar para não sobrepor o conteúdo
-        // O sistema irá gerenciar automaticamente o espaço da status bar
+
+        // Registrar plugin depois do super (mais seguro)
+        registerPlugin(GooglePlayBilling.class);
+
+        // Configurar status bar com fundo branco e ícones escuros
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Não usar setDecorFitsSystemWindows(false) para evitar sobreposição
-            // Deixar o sistema gerenciar o espaço da status bar automaticamente
             WindowInsetsController controller = getWindow().getInsetsController();
             if (controller != null) {
-                // Configurar aparência da status bar (texto claro)
                 controller.setSystemBarsAppearance(
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
                 );
             }
-            // Garantir que a status bar seja transparente mas o conteúdo não fique por trás
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            // Para versões anteriores ao Android 11
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-            // Usar apenas LAYOUT_STABLE sem LAYOUT_FULLSCREEN para evitar sobreposição
+            getWindow().setStatusBarColor(Color.WHITE);
+
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getWindow().setStatusBarColor(Color.WHITE);
             getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            );
+
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(Color.parseColor("#F5F5F5"));
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
             );
         }
     }

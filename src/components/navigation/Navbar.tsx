@@ -101,10 +101,15 @@ const Navbar: React.FC = () => {
     <>
       <style dangerouslySetInnerHTML={{ __html: macbookCSS }} />
       <header 
-        className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md macbook-navbar"
+        className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md macbook-navbar safe-area-top"
+        style={{ 
+          minHeight: '64px',
+          backgroundColor: 'white',
+          zIndex: 9999
+        }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16" style={{ minHeight: '64px' }}>
           {/* Logo */}
           <Link to="/" className="flex items-center flex-shrink-0 -ml-4 sm:-ml-8 lg:-ml-20">
             <img 

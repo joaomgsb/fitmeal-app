@@ -8,6 +8,7 @@ import AdminRoute from './components/auth/AdminRoute';
 import { Toaster } from 'react-hot-toast';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
+import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
@@ -39,21 +40,21 @@ import MyCreditsPage from './pages/MyCreditsPage';
 function AppContent() {
   useScrollToTop();
 
-  // Configurar a status bar quando o app iniciar (apenas no Android/iOS)
+  // Status bar + edge-to-edge: comportamento tradicional (status bar acima do app, como outros apps)
   useEffect(() => {
     const configureStatusBar = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          // Garantir que a status bar NÃO sobreponha o conteúdo
-          await StatusBar.setOverlaysWebView({ overlay: false });
-          // Definir cor de fundo da status bar (branco/cinza claro)
-          await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-          // Configurar estilo dos ícones (Dark = ícones ESCUROS/PRETOS para fundo claro)
-          await StatusBar.setStyle({ style: Style.Dark });
-        } catch (error) {
-          // Ignorar erros se o plugin não estiver disponível
-          console.log('StatusBar plugin não disponível:', error);
+      if (!Capacitor.isNativePlatform()) return;
+      try {
+        if (Capacitor.getPlatform() === 'android') {
+          // Plugin Capawesome: desativa edge-to-edge e aplica insets no WebView
+          await EdgeToEdge.disable();
+          await EdgeToEdge.setBackgroundColor({ color: '#ffffff' });
         }
+        await StatusBar.setOverlaysWebView({ overlay: false });
+        await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+        await StatusBar.setStyle({ style: Style.Dark });
+      } catch (e) {
+        console.log('StatusBar/EdgeToEdge:', e);
       }
     };
 

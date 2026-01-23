@@ -1,3 +1,4 @@
+/// <reference types="@capawesome/capacitor-android-edge-to-edge-support" />
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -19,6 +20,14 @@ const config: CapacitorConfig = {
     },
     App: {
       // Configuração para deep links
+    },
+    StatusBar: {
+      overlaysWebView: false,
+      style: 'DARK',
+      backgroundColor: '#ffffffff'
+    },
+    EdgeToEdge: {
+      backgroundColor: '#ffffff'
     }
   },
   android: {

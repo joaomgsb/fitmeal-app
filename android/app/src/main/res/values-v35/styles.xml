@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Android 15+ (API 35): override apenas do Launch -->
+    <style name="AppTheme.Launch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+
+        <!-- seu opt-out -->
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+
+        <!-- IMPORTANTÍSSIMO: mantém isso -->
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
+
+</resources>

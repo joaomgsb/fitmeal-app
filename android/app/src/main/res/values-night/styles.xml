@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Tema principal do app (SEM ActionBar) -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
@@ -10,16 +9,12 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
 
-        <!-- Status bar branca com ícones escuros -->
         <item name="android:statusBarColor">#FFFFFF</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <!-- Tema do Splash/Launch -->
     <style name="AppTheme.Launch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
-
-        <!-- Depois do splash, aplica o tema principal -->
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 
