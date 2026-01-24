@@ -2,13 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Safe area: navbar abaixo da status bar no Capacitor (só env, sem mínimo fixo) */
+/* Safe area: Android muitas vezes não preenche env(safe-area-inset-top),
+   então usamos fallback com CSS variable caso exista. */
 .safe-area-top {
-  padding-top: constant(safe-area-inset-top);
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
 }
 
-/* Garantir que o conteúdo não fique por trás da status bar no Android */
+/* Garantir que o conteúdo não fique por trás da status bar */
 html, body {
   margin: 0;
   padding: 0;
@@ -54,7 +54,7 @@ header.macbook-navbar {
 /* Estilos para vídeos responsivos */
 .video-container {
   position: relative;
-  padding-bottom: 56.25%; /* Proporção 16:9 */
+  padding-bottom: 56.25%;
   height: 0;
   overflow: hidden;
   max-width: 100%;

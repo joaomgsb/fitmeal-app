@@ -8,7 +8,6 @@ import AdminRoute from './components/auth/AdminRoute';
 import { Toaster } from 'react-hot-toast';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
-import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
@@ -40,21 +39,21 @@ import MyCreditsPage from './pages/MyCreditsPage';
 function AppContent() {
   useScrollToTop();
 
-  // Status bar + edge-to-edge: comportamento tradicional (status bar acima do app, como outros apps)
   useEffect(() => {
     const configureStatusBar = async () => {
       if (!Capacitor.isNativePlatform()) return;
+
       try {
-        if (Capacitor.getPlatform() === 'android') {
-          // Plugin Capawesome: desativa edge-to-edge e aplica insets no WebView
-          await EdgeToEdge.disable();
-          await EdgeToEdge.setBackgroundColor({ color: '#ffffff' });
-        }
+        // Garante que a WebView NÃO fica por trás da status bar
         await StatusBar.setOverlaysWebView({ overlay: false });
-        await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-        await StatusBar.setStyle({ style: Style.Dark });
+
+        // Android: fundo branco na status bar
+        if (Capacitor.getPlatform() === 'android') {
+          await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+          await StatusBar.setStyle({ style: Style.Dark });
+        }
       } catch (e) {
-        console.log('StatusBar/EdgeToEdge:', e);
+        console.log('StatusBar:', e);
       }
     };
 
@@ -63,31 +62,32 @@ function AppContent() {
 
   return (
     <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<HomePage />} />
-            <Route path="receitas" element={<RecipesPage />} />
-            <Route path="receitas/:id" element={<RecipeDetailPage />} />
-            <Route path="planos" element={<PrivateRoute><MealPlansPage /></PrivateRoute>} />
-            <Route path="planos/:id" element={<PrivateRoute><MealPlanDetailPage /></PrivateRoute>} />
-            <Route path="planos/personalizado" element={<PrivateRoute><MealPlanDetailPage /></PrivateRoute>} />
-            <Route path="sugestoes-receitas" element={<PrivateRoute><SuggestedRecipesPage /></PrivateRoute>} />
-            <Route path="reconhecimento-alimentos" element={<PrivateRoute><FoodRecognitionPage /></PrivateRoute>} />
-            <Route path="tracker" element={<PrivateRoute><TrackerPage /></PrivateRoute>} />
-            <Route path="lista-compras" element={<PrivateRoute><ShoppingListPage /></PrivateRoute>} />
-            <Route path="perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-            <Route path="creditos" element={<PrivateRoute><CreditsPage /></PrivateRoute>} />
-            <Route path="meus-creditos" element={<PrivateRoute><MyCreditsPage /></PrivateRoute>} />
-            <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
-            <Route path="admin/termos" element={<AdminRoute><AdminTermsPage /></AdminRoute>} />
-            <Route path="news" element={<NewsPage />} />
-            <Route path="news/:id" element={<NewsDetailPage />} />
-            <Route path="admin/news" element={<AdminRoute><AdminNewsPage /></AdminRoute>} />
-            <Route path="termos-de-uso" element={<TermsOfUsePage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/cadastro" element={<SignUpPage />} />
-          <Route path="/recuperar-senha" element={<ResetPasswordPage />} />
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<HomePage />} />
+        <Route path="receitas" element={<RecipesPage />} />
+        <Route path="receitas/:id" element={<RecipeDetailPage />} />
+        <Route path="planos" element={<PrivateRoute><MealPlansPage /></PrivateRoute>} />
+        <Route path="planos/:id" element={<PrivateRoute><MealPlanDetailPage /></PrivateRoute>} />
+        <Route path="planos/personalizado" element={<PrivateRoute><MealPlanDetailPage /></PrivateRoute>} />
+        <Route path="sugestoes-receitas" element={<PrivateRoute><SuggestedRecipesPage /></PrivateRoute>} />
+        <Route path="reconhecimento-alimentos" element={<PrivateRoute><FoodRecognitionPage /></PrivateRoute>} />
+        <Route path="tracker" element={<PrivateRoute><TrackerPage /></PrivateRoute>} />
+        <Route path="lista-compras" element={<PrivateRoute><ShoppingListPage /></PrivateRoute>} />
+        <Route path="perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+        <Route path="creditos" element={<PrivateRoute><CreditsPage /></PrivateRoute>} />
+        <Route path="meus-creditos" element={<PrivateRoute><MyCreditsPage /></PrivateRoute>} />
+        <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+        <Route path="admin/termos" element={<AdminRoute><AdminTermsPage /></AdminRoute>} />
+        <Route path="news" element={<NewsPage />} />
+        <Route path="news/:id" element={<NewsDetailPage />} />
+        <Route path="admin/news" element={<AdminRoute><AdminNewsPage /></AdminRoute>} />
+        <Route path="termos-de-uso" element={<TermsOfUsePage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/cadastro" element={<SignUpPage />} />
+      <Route path="/recuperar-senha" element={<ResetPasswordPage />} />
     </Routes>
   );
 }
@@ -97,10 +97,10 @@ function App() {
     <AuthProvider>
       <TourProvider>
         <AppContent />
-        <Toaster 
-          position="top-center" 
+        <Toaster
+          position="top-center"
           containerStyle={{
-            top: 100, // Deixa o toast mais embaixo para não ser cortado pela navbar
+            top: 100,
           }}
           toastOptions={{
             style: {
