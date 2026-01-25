@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { TourProvider } from './contexts/TourContext';
@@ -39,12 +39,15 @@ import MyCreditsPage from './pages/MyCreditsPage';
 function AppContent() {
   useScrollToTop();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const configureStatusBar = async () => {
       if (!Capacitor.isNativePlatform()) return;
 
       try {
-        // Não deixar a WebView ficar por trás da status bar
+        // Garante que a status bar está visível
+        await StatusBar.show();
+
+        // Não desenhar por trás da status bar
         await StatusBar.setOverlaysWebView({ overlay: false });
 
         if (Capacitor.getPlatform() === 'android') {
@@ -100,9 +103,7 @@ function App() {
           position="top-center"
           containerStyle={{ top: 100 }}
           toastOptions={{
-            style: {
-              maxWidth: '90vw',
-            },
+            style: { maxWidth: '90vw' },
           }}
         />
       </TourProvider>

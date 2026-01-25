@@ -13,18 +13,7 @@ const Navbar: React.FC = () => {
   const { isTourActive } = useTour();
   const adminDropdownRef = useRef<HTMLDivElement>(null);
 
-  const macbookCSS = `
-    @media (-webkit-device-pixel-ratio: 2) and (min-width: 1440px) and (max-width: 1728px) {
-      .macbook-navbar .nav-links {
-        gap: 0.75rem !important;
-      }
-      .macbook-navbar .nav-link {
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-        font-size: 0.875rem !important;
-      }
-    }
-    
+  const responsiveCSS = `
     .macbook-navbar {
       min-height: 4rem !important;
     }
@@ -32,12 +21,38 @@ const Navbar: React.FC = () => {
     .macbook-navbar .nav-links {
       flex: 1;
       justify-content: center;
-      margin: 0 2rem;
+      margin: 0 1rem;
     }
     
     .macbook-navbar .nav-link {
       white-space: nowrap;
       min-width: fit-content;
+    }
+
+    /* Telas 1280px - 1439px */
+    @media (min-width: 1280px) and (max-width: 1439px) {
+      .macbook-navbar .nav-links {
+        gap: 0.125rem !important;
+        margin: 0 0.25rem !important;
+      }
+      .macbook-navbar .nav-link {
+        padding-left: 0.375rem !important;
+        padding-right: 0.375rem !important;
+        font-size: 0.7rem !important;
+      }
+    }
+
+    /* Telas 1440px+ */
+    @media (min-width: 1440px) {
+      .macbook-navbar .nav-links {
+        gap: 0.5rem !important;
+        margin: 0 1rem !important;
+      }
+      .macbook-navbar .nav-link {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        font-size: 0.875rem !important;
+      }
     }
   `;
 
@@ -89,7 +104,7 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: macbookCSS }} />
+      <style dangerouslySetInnerHTML={{ __html: responsiveCSS }} />
 
       <header
         className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md macbook-navbar"
@@ -101,21 +116,21 @@ const Navbar: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16" style={{ minHeight: '64px' }}>
-            <Link to="/" className="flex items-center flex-shrink-0 -ml-4 sm:-ml-8 lg:-ml-20">
+            <Link to="/" className="flex items-center flex-shrink-0 -ml-4 sm:-ml-8 lg:-ml-6 xl:-ml-20">
               <img
                 src="/images/logoextensa.png"
                 alt="FitMeal Logo"
-                className="h-20 sm:h-20 md:h-24 lg:h-28 w-auto object-contain max-w-[240px] sm:max-w-none"
+                className="h-20 sm:h-20 md:h-24 lg:h-20 xl:h-28 w-auto object-contain max-w-[240px] lg:max-w-[200px] xl:max-w-none"
               />
             </Link>
 
-            <nav className="hidden lg:flex items-center space-x-3 xl:space-x-4 nav-links flex-1 justify-center">
+            <nav className="hidden xl:flex items-center nav-links flex-1 justify-center">
               {navLinks.map((link) => (
                 <NavLink
                   key={link.path}
                   to={link.path}
                   className={({ isActive }) =>
-                    `px-3 py-2 rounded-md transition-colors font-medium text-sm xl:text-base nav-link whitespace-nowrap ${
+                    `px-2 py-2 rounded-md transition-colors font-medium text-xs xl:text-sm 2xl:text-base nav-link whitespace-nowrap ${
                       isActive
                         ? 'text-primary-600 bg-primary-50'
                         : 'text-neutral-600 hover:text-primary-500 hover:bg-neutral-100'
@@ -130,7 +145,7 @@ const Navbar: React.FC = () => {
                 <div className="relative" ref={adminDropdownRef}>
                   <button
                     onClick={() => setIsAdminDropdownOpen(!isAdminDropdownOpen)}
-                    className={`px-3 py-2 rounded-md transition-colors font-medium flex items-center gap-1 text-sm xl:text-base ${
+                    className={`px-2 py-2 rounded-md transition-colors font-medium flex items-center gap-1 text-xs xl:text-sm 2xl:text-base ${
                       location.pathname.startsWith('/admin')
                         ? 'text-primary-600 bg-primary-50'
                         : 'text-neutral-600 hover:text-primary-500 hover:bg-neutral-100'
@@ -200,7 +215,7 @@ const Navbar: React.FC = () => {
               </Link>
 
               <button
-                className="lg:hidden flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-md bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                className="xl:hidden flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-md bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
                 {isMenuOpen ? <X size={20} className="sm:w-6 sm:h-6" /> : <Menu size={20} className="sm:w-6 sm:h-6" />}
@@ -211,7 +226,7 @@ const Navbar: React.FC = () => {
 
         {isMenuOpen && (
           <motion.div
-            className="lg:hidden bg-white shadow-lg border-t border-gray-200"
+            className="xl:hidden bg-white shadow-lg border-t border-gray-200"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}

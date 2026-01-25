@@ -108,23 +108,83 @@ const SignUpPage: React.FC = () => {
     }
   };
 
-  // Função para calcular TDEE (Gasto Energético Total Diário)
+  // Função para calcular TDEE (Gasto Energético Total Diário) considerando TODOS os fatores
   const calculateTDEE = () => {
     const bmr = calculateBMR();
     if (!bmr || !activityLevel) return 0;
     
-    const activityMultipliers = {
-      'sedentario': 1.2,
-      'leve': 1.375,
-      'moderado': 1.55,
-      'ativo': 1.725,
-      'muito_ativo': 1.9
+    // Multiplicador base pelo nível de atividade (atividades diárias, trabalho, etc)
+    const activityMultipliers: Record<string, number> = {
+      'sedentario': 1.2,      // Pouco ou nenhum exercício
+      'leve': 1.375,          // Exercício leve 1-3 dias
+      'moderado': 1.55,       // Exercício moderado 3-5 dias
+      'ativo': 1.725,         // Exercício intenso 6-7 dias
+      'muito_ativo': 1.9      // Exercício muito intenso + trabalho físico
     };
     
-    return Math.round(bmr * activityMultipliers[activityLevel as keyof typeof activityMultipliers]);
+    let tdee = bmr * (activityMultipliers[activityLevel] || 1.2);
+    
+    // Se tiver dados de treino, aplicar ajuste adicional mais preciso
+    if (workoutFrequency && workoutIntensity && workoutDuration) {
+      // Calcular calorias extras queimadas por treino baseado em intensidade e duração
+      const intensityMultipliers: Record<string, number> = {
+        'baixa': 4,        // ~4 cal/min (caminhada, yoga)
+        'moderada': 7,     // ~7 cal/min (corrida leve, musculação)
+        'alta': 10,        // ~10 cal/min (HIIT, musculação pesada)
+        'muito_alta': 14   // ~14 cal/min (CrossFit, atletismo intenso)
+      };
+      
+      // Duração média em minutos
+      const durationMinutes: Record<string, number> = {
+        '30min': 25,
+        '45min': 40,
+        '60min': 55,
+        '90min': 75,
+        '120min': 105
+      };
+      
+      // Frequência semanal (dias por semana)
+      const frequencyDays: Record<string, number> = {
+        '1-2': 1.5,
+        '3-4': 3.5,
+        '5-6': 5.5,
+        '7': 7
+      };
+      
+      const calPerMin = intensityMultipliers[workoutIntensity] || 7;
+      const minutes = durationMinutes[workoutDuration] || 45;
+      const daysPerWeek = frequencyDays[workoutFrequency] || 3;
+      
+      // Calorias extras por treino ajustadas pelo peso corporal
+      const weightFactor = parseFloat(weight) / 70; // Normalizado para 70kg
+      const caloriesPerWorkout = calPerMin * minutes * weightFactor;
+      
+      // Média diária de calorias extras dos treinos
+      const dailyWorkoutCalories = (caloriesPerWorkout * daysPerWeek) / 7;
+      
+      // Ajustar TDEE: remover o excesso já contabilizado no multiplicador de atividade
+      // e adicionar o cálculo preciso baseado nos dados de treino
+      const baseMultiplier = activityMultipliers[activityLevel] || 1.2;
+      
+      // Se o nível de atividade já considera treinos, fazer ajuste fino
+      if (baseMultiplier >= 1.55) {
+        // Para níveis moderado+, o multiplicador já inclui exercícios
+        // Calcular a diferença entre o estimado e o real baseado nos dados
+        const estimatedExerciseCalories = bmr * (baseMultiplier - 1.2);
+        const difference = dailyWorkoutCalories - estimatedExerciseCalories;
+        
+        // Aplicar apenas a diferença (positiva ou negativa)
+        tdee = tdee + (difference * 0.5); // Fator de 0.5 para não superestimar
+      } else {
+        // Para sedentário/leve, adicionar calorias de treino diretamente
+        tdee = bmr * 1.2 + dailyWorkoutCalories;
+      }
+    }
+    
+    return Math.round(tdee);
   };
 
-  // Atualizar cálculos quando dados mudarem
+  // Atualizar cálculos quando QUALQUER dado relevante mudar
   React.useEffect(() => {
     if (weight && height && age && gender) {
       const bmr = calculateBMR();
@@ -135,7 +195,7 @@ const SignUpPage: React.FC = () => {
         setTotalDailyEnergyExpenditure(tdee.toString());
       }
     }
-  }, [weight, height, age, gender, activityLevel]);
+  }, [weight, height, age, gender, activityLevel, workoutFrequency, workoutIntensity, workoutDuration]);
 
   const handleTermsAcceptance = async () => {
     setTermsAccepted(true);
@@ -288,12 +348,34 @@ const SignUpPage: React.FC = () => {
       return;
     }
 
+    if (!isValidEmail(email)) {
+      setError('Digite um email válido. O email deve conter @ e um domínio (ex: nome@email.com).');
+      return;
+    }
+
     // Abrir modal de termos se ainda não foi aceito
     handleProceedToSignup();
   };
 
+  // Validação de email: obrigatório ter @ e formato básico (algo@dominio.extensão)
+  const isValidEmail = (e: string) => {
+    if (!e?.trim()) return false;
+    const hasAt = e.includes('@');
+    const parts = e.split('@');
+    const beforeAt = parts[0]?.trim().length > 0;
+    const afterAt = parts[1]?.includes('.') && parts[1]?.trim().length > 2;
+    return hasAt && beforeAt && afterAt;
+  };
+
   const validateStep1 = () => {
-    return name && email && password && confirmPassword && password === confirmPassword;
+    return (
+      name &&
+      email &&
+      isValidEmail(email) &&
+      password &&
+      confirmPassword &&
+      password === confirmPassword
+    );
   };
 
   const validateStep2 = () => {
@@ -372,11 +454,15 @@ const SignUpPage: React.FC = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ex: nome@email.com"
                     className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     required
                   />
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={18} />
                 </div>
+                <p className="mt-1 text-xs text-neutral-500">
+                  O email deve conter @ e um domínio válido.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Senha</label>
@@ -424,8 +510,16 @@ const SignUpPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (!validateStep1()) {
-                    setError('Preencha todos os campos corretamente.');
+                  if (!name || !email || !password || !confirmPassword) {
+                    setError('Preencha todos os campos obrigatórios.');
+                    return;
+                  }
+                  if (!isValidEmail(email)) {
+                    setError('Digite um email válido. O email deve conter @ e um domínio (ex: nome@email.com).');
+                    return;
+                  }
+                  if (password !== confirmPassword) {
+                    setError('As senhas não coincidem.');
                     return;
                   }
                   setError('');
