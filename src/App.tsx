@@ -44,10 +44,9 @@ function AppContent() {
       if (!Capacitor.isNativePlatform()) return;
 
       try {
-        // Garante que a WebView NÃO fica por trás da status bar
+        // Não deixar a WebView ficar por trás da status bar
         await StatusBar.setOverlaysWebView({ overlay: false });
 
-        // Android: fundo branco na status bar
         if (Capacitor.getPlatform() === 'android') {
           await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
           await StatusBar.setStyle({ style: Style.Dark });
@@ -99,9 +98,7 @@ function App() {
         <AppContent />
         <Toaster
           position="top-center"
-          containerStyle={{
-            top: 100,
-          }}
+          containerStyle={{ top: 100 }}
           toastOptions={{
             style: {
               maxWidth: '90vw',

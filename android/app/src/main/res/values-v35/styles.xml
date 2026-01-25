@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Android 15+ (API 35): override apenas do Launch -->
-    <style name="AppTheme.Launch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+    <style name="AppTheme.Launch" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
 
-        <!-- seu opt-out -->
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+
+        <!-- mantém teu opt-out -->
         <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
-
-        <!-- IMPORTANTÍSSIMO: mantém isso -->
-        <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 
 </resources>

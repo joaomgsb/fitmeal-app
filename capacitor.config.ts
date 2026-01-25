@@ -16,9 +16,7 @@ const config: CapacitorConfig = {
       launchShowDuration: 2000,
       launchAutoHide: true,
     },
-    App: {
-      // deep links
-    },
+    App: {},
     StatusBar: {
       overlaysWebView: false,
       style: 'DARK',

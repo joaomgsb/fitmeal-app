@@ -2,8 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Safe area: Android muitas vezes não preenche env(safe-area-inset-top),
-   então usamos fallback com CSS variable caso exista. */
+/* Fundo branco global: evita “faixa preta” que pode vazar do windowBackground em alguns Androids */
+html, body, #root {
+  background-color: #ffffff !important;
+}
+
+/* Safe area: mantemos como fallback geral, mas NÃO use na navbar quando overlaysWebView=false */
 .safe-area-top {
   padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
 }
