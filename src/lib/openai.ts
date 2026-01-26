@@ -75,6 +75,16 @@ IMPORTANTE: ${userData.knowsCalorieNeeds ?
   'O usuário forneceu necessidades calóricas específicas. Use EXATAMENTE essas informações para gerar o plano, ignorando os cálculos automáticos de TMB e TDEE.' : 
   'Use as informações de TMB e TDEE fornecidas para calcular as calorias do plano de forma mais precisa.'}
 
+REGRAS OBRIGATÓRIAS SOBRE INGREDIENTES:
+- Use APENAS ingredientes ACESSÍVEIS e COMUNS no dia a dia brasileiro
+- PROIBIDO usar ingredientes caros ou exóticos como: salmão, atum fresco, quinoa importada, abacate em excesso, castanhas caras (macadâmia), azeite trufado, cogumelos especiais (shiitake, shimeji), frutas importadas, etc.
+- PREFIRA proteínas acessíveis: frango, ovos, carne moída, sardinha em lata, atum em lata, carne de porco, fígado, frango desfiado, peito de frango, coxa/sobrecoxa
+- PREFIRA carboidratos comuns: arroz branco/integral, feijão, batata inglesa, batata doce, macarrão, pão francês/integral, aveia, mandioca, inhame, cuscuz
+- PREFIRA vegetais e legumes acessíveis: alface, tomate, cenoura, chuchu, abobrinha, repolho, couve, beterraba, pepino, cebola, alho
+- PREFIRA frutas comuns: banana, maçã, laranja, mamão, melancia, abacaxi, manga (da época), limão, tangerina
+- Use temperos básicos: sal, alho, cebola, cheiro-verde, colorau, cominho, orégano, pimenta-do-reino
+- Pense em refeições que uma família brasileira comum consegue preparar e comprar no supermercado do bairro
+
 Por favor, gere um plano alimentar completo que inclua:
 
 1. Visão geral do plano:
@@ -163,7 +173,7 @@ Por favor, formate a resposta em JSON com a seguinte estrutura:
       messages: [
         {
           role: "system",
-          content: "Você é um nutricionista esportivo especializado, com vasta experiência em criar planos alimentares personalizados. Você deve fornecer planos detalhados e práticos, com medidas exatas e instruções claras de preparação. Foque em refeições realistas e fáceis de preparar, mantendo o rigor nutricional necessário para atingir os objetivos do usuário. Use sempre as informações de TMB e TDEE fornecidas para cálculos precisos de calorias."
+          content: "Você é um nutricionista esportivo brasileiro, especializado em criar planos alimentares personalizados com FOCO NA REALIDADE BRASILEIRA. Você deve fornecer planos detalhados e práticos usando APENAS ingredientes acessíveis e comuns encontrados em qualquer supermercado brasileiro. NUNCA sugira ingredientes caros ou exóticos (como salmão, quinoa importada, cogumelos especiais, frutas importadas). Priorize o tradicional arroz com feijão, carnes acessíveis (frango, ovos, carne moída), vegetais comuns e frutas da estação. Suas refeições devem ser realistas para o bolso e a rotina de uma família brasileira comum."
         },
         {
           role: "user",
@@ -208,14 +218,25 @@ Informações de Atividade Física e Metabolismo:
 - Alergias/Intolerâncias: ${userData.allergies.length > 0 ? userData.allergies.join(', ') : 'Nenhuma especificada'}
 
 IMPORTANTE: Gere receitas DIFERENTES e VARIADAS a cada chamada. Evite repetir receitas comuns.
+
+REGRAS OBRIGATÓRIAS SOBRE INGREDIENTES:
+- Use APENAS ingredientes ACESSÍVEIS e COMUNS no dia a dia brasileiro
+- PROIBIDO usar ingredientes caros ou exóticos como: salmão, atum fresco, quinoa importada, abacate em excesso, castanhas caras (macadâmia), azeite trufado, cogumelos especiais (shiitake, shimeji), frutas importadas, etc.
+- PREFIRA proteínas acessíveis: frango, ovos, carne moída, sardinha em lata, atum em lata, carne de porco, fígado, peito de frango, coxa/sobrecoxa
+- PREFIRA carboidratos comuns: arroz branco/integral, feijão, batata inglesa, batata doce, macarrão, pão francês/integral, aveia, mandioca, inhame, cuscuz
+- PREFIRA vegetais e legumes acessíveis: alface, tomate, cenoura, chuchu, abobrinha, repolho, couve, beterraba, pepino, cebola, alho
+- PREFIRA frutas comuns: banana, maçã, laranja, mamão, melancia, abacaxi, manga (da época), limão
+- Use temperos básicos: sal, alho, cebola, cheiro-verde, colorau, cominho, orégano, pimenta-do-reino
+- Pense em receitas que uma família brasileira comum consegue preparar e comprar no supermercado do bairro
+
 Considere os seguintes aspectos para garantir variedade:
-- Alterne entre diferentes tipos de proteínas (frango, peixe, carne vermelha, ovos, proteínas vegetais)
-- Varie os métodos de preparo (grelhado, assado, cozido, vapor)
-- Inclua diferentes grupos de carboidratos (arroz, batata, quinoa, aveia)
-- Use diferentes combinações de vegetais e legumes
+- Alterne entre diferentes tipos de proteínas ACESSÍVEIS (frango, carne moída, ovos, sardinha em lata, carne de porco)
+- Varie os métodos de preparo (grelhado, assado, cozido, refogado, ensopado)
+- Inclua diferentes grupos de carboidratos COMUNS (arroz, batata, macarrão, aveia, cuscuz)
+- Use diferentes combinações de vegetais e legumes ACESSÍVEIS
 - Alterne entre refeições quentes e frias
 - Inclua opções para diferentes horários do dia
-- Considere receitas de diferentes culturas culinárias
+- Considere receitas da CULINÁRIA BRASILEIRA tradicional e regional
 
 Além disso, para cada receita:
 - Inclua uma descrição única e detalhada
@@ -258,7 +279,7 @@ Por favor, formate a resposta em um array JSON com a seguinte estrutura, onde ca
       messages: [
         {
           role: "system",
-          content: "Você é um chef criativo especializado em nutrição esportiva, com vasto conhecimento de diferentes culinárias e técnicas de preparo. Sua missão é criar receitas únicas, variadas e inovadoras que se encaixem nos objetivos do usuário. Evite sugerir receitas óbvias ou repetitivas - busque sempre surpreender com combinações interessantes e saudáveis. Use seu conhecimento de diferentes culturas culinárias para trazer variedade às sugestões."
+          content: "Você é um chef brasileiro especializado em nutrição esportiva, com foco na CULINÁRIA BRASILEIRA ACESSÍVEL. Sua missão é criar receitas variadas, saborosas e nutritivas usando APENAS ingredientes que qualquer brasileiro encontra facilmente no supermercado do bairro por preços acessíveis. NUNCA sugira ingredientes caros ou exóticos (salmão, quinoa importada, cogumelos especiais, frutas importadas). Priorize receitas com frango, ovos, carne moída, sardinha em lata, arroz, feijão, batata, legumes comuns e frutas da estação. Suas receitas devem ser realistas para o dia a dia de uma família brasileira comum."
         },
         {
           role: "user",
