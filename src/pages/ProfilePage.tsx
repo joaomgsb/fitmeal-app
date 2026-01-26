@@ -200,9 +200,19 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Função para calcular TDEE (Gasto Energético Total Diário)
-  const calculateTDEE = (bmr: number, activityLevel: string) => {
-    const activityMultipliers = {
+  // Função para calcular TDEE (Gasto Energético Total Diário) considerando TODOS os fatores
+  const calculateTDEE = (
+    bmr: number, 
+    activityLevel: string, 
+    workoutFrequency?: string, 
+    workoutIntensity?: string, 
+    workoutDuration?: string,
+    weight?: number
+  ) => {
+    if (!bmr || !activityLevel) return 0;
+    
+    // Multiplicador base pelo nível de atividade (atividades diárias, trabalho, etc)
+    const activityMultipliers: Record<string, number> = {
       'sedentario': 1.2,
       'leve': 1.375,
       'moderado': 1.55,
@@ -210,7 +220,66 @@ const ProfilePage: React.FC = () => {
       'muito_ativo': 1.9
     };
     
-    return Math.round(bmr * activityMultipliers[activityLevel as keyof typeof activityMultipliers]);
+    let tdee = bmr * (activityMultipliers[activityLevel] || 1.2);
+    
+    // Se tiver dados de treino, aplicar ajuste adicional mais preciso
+    if (workoutFrequency && workoutIntensity && workoutDuration && weight) {
+      // Calcular calorias extras queimadas por treino baseado em intensidade e duração
+      const intensityMultipliers: Record<string, number> = {
+        'baixa': 4,        // ~4 cal/min (caminhada, yoga)
+        'moderada': 7,     // ~7 cal/min (corrida leve, musculação)
+        'alta': 10,        // ~10 cal/min (HIIT, musculação pesada)
+        'muito_alta': 14   // ~14 cal/min (CrossFit, atletismo intenso)
+      };
+      
+      // Duração média em minutos
+      const durationMinutes: Record<string, number> = {
+        '30min': 25,
+        '45min': 40,
+        '60min': 55,
+        '90min': 75,
+        '120min': 105
+      };
+      
+      // Frequência semanal (dias por semana)
+      const frequencyDays: Record<string, number> = {
+        '1-2': 1.5,
+        '3-4': 3.5,
+        '5-6': 5.5,
+        '7': 7
+      };
+      
+      const calPerMin = intensityMultipliers[workoutIntensity] || 7;
+      const minutes = durationMinutes[workoutDuration] || 45;
+      const daysPerWeek = frequencyDays[workoutFrequency] || 3;
+      
+      // Calorias extras por treino ajustadas pelo peso corporal
+      const weightFactor = weight / 70; // Normalizado para 70kg
+      const caloriesPerWorkout = calPerMin * minutes * weightFactor;
+      
+      // Média diária de calorias extras dos treinos
+      const dailyWorkoutCalories = (caloriesPerWorkout * daysPerWeek) / 7;
+      
+      // Ajustar TDEE: remover o excesso já contabilizado no multiplicador de atividade
+      // e adicionar o cálculo preciso baseado nos dados de treino
+      const baseMultiplier = activityMultipliers[activityLevel] || 1.2;
+      
+      // Se o nível de atividade já considera treinos, fazer ajuste fino
+      if (baseMultiplier >= 1.55) {
+        // Para níveis moderado+, o multiplicador já inclui exercícios
+        // Calcular a diferença entre o estimado e o real baseado nos dados
+        const estimatedExerciseCalories = bmr * (baseMultiplier - 1.2);
+        const difference = dailyWorkoutCalories - estimatedExerciseCalories;
+        
+        // Aplicar apenas a diferença (positiva ou negativa)
+        tdee = tdee + (difference * 0.5); // Fator de 0.5 para não superestimar
+      } else {
+        // Para sedentário/leve, adicionar calorias de treino diretamente
+        tdee = bmr * 1.2 + dailyWorkoutCalories;
+      }
+    }
+    
+    return Math.round(tdee);
   };
 
   const handleInputChange = (field: keyof UserProfile, value: string | number | string[]) => {
@@ -220,8 +289,9 @@ const ProfilePage: React.FC = () => {
     
     // Recalcular TMB e TDEE quando dados físicos ou nível de atividade mudarem
     if (field === 'weight' || field === 'height' || field === 'age' || field === 'gender') {
+      const newWeight = field === 'weight' ? value as number : localProfile.weight;
       const bmr = calculateBMR(
-        field === 'weight' ? value as number : localProfile.weight,
+        newWeight,
         field === 'height' ? value as number : localProfile.height,
         field === 'age' ? value as number : localProfile.age,
         field === 'gender' ? value as string : localProfile.gender
@@ -229,11 +299,26 @@ const ProfilePage: React.FC = () => {
       updatedProfile.basalMetabolicRate = bmr;
       
       if (localProfile.activityLevel) {
-        updatedProfile.totalDailyEnergyExpenditure = calculateTDEE(bmr, localProfile.activityLevel);
+        updatedProfile.totalDailyEnergyExpenditure = calculateTDEE(
+          bmr, 
+          localProfile.activityLevel,
+          localProfile.workoutFrequency,
+          localProfile.workoutIntensity,
+          localProfile.workoutDuration,
+          newWeight
+        );
       }
-    } else if (field === 'activityLevel') {
-              if (Number(localProfile.basalMetabolicRate) > 0) {
-        updatedProfile.totalDailyEnergyExpenditure = calculateTDEE(localProfile.basalMetabolicRate, value as string);
+    } else if (field === 'activityLevel' || field === 'workoutFrequency' || field === 'workoutIntensity' || field === 'workoutDuration') {
+      // Recalcular TDEE quando qualquer dado de atividade/treino mudar
+      if (Number(localProfile.basalMetabolicRate) > 0) {
+        updatedProfile.totalDailyEnergyExpenditure = calculateTDEE(
+          localProfile.basalMetabolicRate, 
+          field === 'activityLevel' ? value as string : localProfile.activityLevel,
+          field === 'workoutFrequency' ? value as string : localProfile.workoutFrequency,
+          field === 'workoutIntensity' ? value as string : localProfile.workoutIntensity,
+          field === 'workoutDuration' ? value as string : localProfile.workoutDuration,
+          localProfile.weight
+        );
       }
     }
     
